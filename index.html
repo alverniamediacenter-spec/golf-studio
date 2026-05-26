@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Golf Broadcast Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05100a;--s1:#0b1c10;--s2:#112016;--s3:#18281c;--s4:#1e3022;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.11);--bdr3:rgba(255,255,255,.18);
+  --gold:#c9aa4e;--gold2:#e8cb72;--gold3:#f6e09e;
+  --green:#2d6b38;--green2:#3d8e4a;--green3:#50ae5c;
+  --cream:#e0d7c2;--muted:#66786a;--dim:#3e4e40;--white:#f3eee3;
+  --tee:#5a9fd5;--fair:#46a858;--app:#d08a1e;--chip:#a450b0;--putt:#34a8b6;--hole:#c9aa4e;--celeb:#e8765a;
+  --red:#a02818;
+  --serif:'Libre Baskerville',serif;
+  --mono:'Azeret Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;display:flex;flex-direction:column}
+
+/* grain */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.35;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E")}
+
+/* ── VIEWS ── */
+.view{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.view.on{display:flex}
+
+/* ── HEADER ── */
+.hdr{display:flex;align-items:center;gap:10px;padding:11px 20px;
+  background:rgba(5,16,10,.97);border-bottom:1px solid var(--bdr);
+  backdrop-filter:blur(14px);flex-shrink:0;z-index:60}
+.logo{font-family:var(--serif);font-size:1.3rem;font-weight:700;color:var(--gold);
+  letter-spacing:.02em;line-height:1}
+.logo-sub{font-size:.52rem;font-family:var(--mono);color:var(--muted);
+  letter-spacing:.2em;text-transform:uppercase;margin-left:7px}
+.badge{background:var(--s2);border:1px solid var(--bdr2);padding:3px 10px;
+  border-radius:20px;font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.badge b{color:var(--gold2);font-weight:600}
+.hdr-gap{flex:1}
+.hdr-btns{display:flex;gap:6px;align-items:center}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:3px;
+  border:none;cursor:pointer;font-family:var(--mono);font-size:.58rem;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;transition:all .18s;white-space:nowrap;
+  -webkit-user-select:none;user-select:none}
+.btn-gold{background:var(--gold);color:#05100a}
+.btn-gold:hover:not(:disabled){background:var(--gold2);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--bdr2);color:var(--cream)}
+.btn-outline:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover:not(:disabled){background:var(--green2)}
+.btn-ghost{background:transparent;border:1px solid var(--bdr);color:var(--muted);padding:6px 12px}
+.btn-ghost:hover{border-color:var(--muted);color:var(--cream)}
+.btn-sm{padding:5px 11px;font-size:.54rem}
+.btn-xs{padding:3px 8px;font-size:.5rem}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+
+/* ══════════════════════════════════════════════
+   LANDING
+══════════════════════════════════════════════ */
+#v-land{align-items:center;justify-content:center;overflow:auto;padding:28px 18px;
+  background:
+    radial-gradient(ellipse at 22% 30%,rgba(45,107,56,.15),transparent 55%),
+    radial-gradient(ellipse at 82% 72%,rgba(201,170,78,.09),transparent 50%),
+    var(--bg)}
+.land-inner{max-width:640px;width:100%;text-align:center}
+.land-kicker{font-size:.54rem;letter-spacing:.4em;text-transform:uppercase;color:var(--green3);margin-bottom:14px}
+.land-h{font-family:var(--serif);font-size:clamp(2rem,5.5vw,3.6rem);
+  font-weight:700;line-height:1.05;color:var(--white);margin-bottom:11px}
+.land-h em{font-style:italic;color:var(--gold)}
+.land-p{font-size:.68rem;line-height:1.95;color:var(--muted);max-width:440px;margin:0 auto 28px}
+.land-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.land-card{background:var(--s1);border:1px solid var(--bdr);border-radius:5px;
+  padding:20px 16px;text-align:left;cursor:pointer;transition:all .22s;position:relative;overflow:hidden}
+.land-card::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .28s;
+  background:linear-gradient(135deg,rgba(201,170,78,.08),transparent 60%)}
+.land-card:hover{border-color:rgba(201,170,78,.38);transform:translateY(-2px)}
+.land-card:hover::after{opacity:1}
+.lc-i{font-size:1.6rem;margin-bottom:9px}
+.lc-t{font-family:var(--serif);font-size:.98rem;font-weight:700;color:var(--white);margin-bottom:4px}
+.lc-d{font-size:.58rem;color:var(--muted);line-height:1.75}
+.land-or{font-size:.54rem;letter-spacing:.22em;color:var(--dim);margin:4px 0 15px;text-transform:uppercase}
+.join-row{display:flex;gap:8px;max-width:330px;margin:0 auto}
+.ti{background:var(--s1);border:1px solid var(--bdr2);color:var(--cream);
+  padding:9px 13px;border-radius:3px;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;outline:none;transition:border-color .2s;width:100%}
+.ti:focus{border-color:var(--gold)}
+.ti::placeholder{color:var(--muted)}
+
+/* ══════════════════════════════════════════════
+   SETUP WIZARD
+══════════════════════════════════════════════ */
+#v-setup{overflow:auto}
+#v-setup .hdr{position:static}
+.setup-body{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:24px}
+.setup-card{background:var(--s1);border:1px solid var(--bdr);border-radius:6px;
+  padding:28px;max-width:580px;width:100%;display:flex;flex-direction:column;gap:20px}
+.setup-h{font-family:var(--serif);font-size:1.45rem;font-weight:700;color:var(--gold2)}
+.setup-desc{font-size:.62rem;color:var(--muted);line-height:1.8}
+.fg{display:flex;flex-direction:column;gap:7px}
+.fl{font-size:.53rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.ti-w{width:100%;background:var(--s2);border:1px solid var(--bdr2);color:var(--cream);
+  padding:9px 13px;border-radius:3px;font-family:var(--mono);font-size:.72rem;outline:none;
+  transition:border-color .2s}
+.ti-w:focus{border-color:var(--gold)}
+.ti-w::placeholder{color:var(--dim)}
+
+/* Player setup rows */
+.player-setup-list{display:flex;flex-direction:column;gap:8px}
+.psr{background:var(--s2);border:1px solid var(--bdr);border-radius:4px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:8px;position:relative}
+.psr-num{position:absolute;top:10px;right:12px;width:20px;height:20px;background:var(--s3);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.55rem;color:var(--gold);font-weight:600}
+.psr-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.psr-add{display:flex;justify-content:flex-end;margin-top:4px}
+
+/* Holes toggle */
+.holes-toggle{display:flex;gap:8px}
+.ht-btn{padding:8px 20px;background:var(--s2);border:1px solid var(--bdr2);
+  color:var(--muted);border-radius:3px;cursor:pointer;font-family:var(--mono);
+  font-size:.62rem;letter-spacing:.12em;transition:all .2s}
+.ht-btn.active{background:var(--gold);color:#05100a;border-color:var(--gold);font-weight:600}
+
+/* Lower-third preset */
+.lt-presets{display:flex;gap:8px;flex-wrap:wrap}
+.ltp{padding:8px 14px;background:var(--s2);border:1px solid var(--bdr2);border-radius:3px;
+  cursor:pointer;font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;
+  color:var(--muted);transition:all .2s;text-transform:uppercase}
+.ltp.active{border-color:var(--gold);color:var(--gold);background:rgba(201,170,78,.08)}
+
+/* Lower-third toggles */
+.lt-toggles{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.lt-toggle{display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:var(--s2);border:1px solid var(--bdr);border-radius:3px;
+  cursor:pointer;transition:all .15s;-webkit-user-select:none;user-select:none}
+.lt-toggle:hover{border-color:var(--bdr2)}
+.lt-toggle.on{border-color:rgba(201,170,78,.35);background:rgba(201,170,78,.06)}
+.ltt-check{width:14px;height:14px;border-radius:2px;border:1px solid var(--bdr2);
+  background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:.55rem;transition:all .15s}
+.lt-toggle.on .ltt-check{background:var(--gold);border-color:var(--gold);color:#05100a}
+.ltt-label{font-size:.58rem;color:var(--muted);letter-spacing:.06em}
+.lt-toggle.on .ltt-label{color:var(--cream)}
+
+.setup-footer{display:flex;gap:8px;justify-content:flex-end;padding-top:4px}
+
+/* ══════════════════════════════════════════════
+   SHARE SCREEN
+══════════════════════════════════════════════ */
+#v-share{align-items:center;justify-content:center;overflow:auto;padding:28px 18px;
+  background:
+    radial-gradient(ellipse at 50% 20%,rgba(201,170,78,.1),transparent 55%),
+    radial-gradient(ellipse at 20% 80%,rgba(45,107,56,.1),transparent 50%),
+    var(--bg)}
+.share-card{background:var(--s1);border:1px solid rgba(201,170,78,.2);border-radius:8px;
+  padding:32px 28px;max-width:480px;width:100%;display:flex;flex-direction:column;
+  gap:22px;text-align:center}
+.share-kicker{font-size:.54rem;letter-spacing:.3em;text-transform:uppercase;color:var(--green3)}
+.share-h{font-family:var(--serif);font-size:1.7rem;font-weight:700;color:var(--gold2);line-height:1.15}
+.share-tournament{font-size:.65rem;color:var(--muted);letter-spacing:.08em}
+.share-code-wrap{background:var(--bg);border:1px solid rgba(201,170,78,.25);
+  border-radius:6px;padding:20px 16px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.share-code-lbl{font-size:.52rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)}
+.share-code{font-family:var(--serif);font-size:3rem;font-weight:700;
+  color:var(--gold);letter-spacing:.28em;line-height:1}
+.share-code-sub{font-size:.56rem;color:var(--muted);letter-spacing:.1em}
+.share-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.share-qr-lbl{font-size:.56rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.share-link-row{display:flex;gap:8px;width:100%}
+.share-link-in{flex:1;background:var(--s2);border:1px solid var(--bdr2);color:var(--muted);
+  padding:8px 11px;border-radius:3px;font-size:.58rem;font-family:var(--mono);outline:none}
+.share-players{display:flex;flex-direction:column;gap:6px;text-align:left}
+.share-player-row{display:flex;align-items:center;gap:9px;padding:8px 10px;
+  background:var(--s2);border-radius:3px}
+.sp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sp-name{font-size:.68rem;color:var(--cream);flex:1}
+.sp-team{font-size:.55rem;color:var(--muted);letter-spacing:.04em}
+.share-actions{display:flex;flex-direction:column;gap:8px}
+.share-note{font-size:.58rem;color:var(--muted);line-height:1.75;
+  background:var(--s2);border-radius:3px;padding:10px 12px;text-align:left}
+
+/* ══════════════════════════════════════════════
+   MAIN HUB
+══════════════════════════════════════════════ */
+#v-hub{flex-direction:row;overflow:hidden}
+.hub-sidebar{width:252px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--bdr);
+  display:flex;flex-direction:column;overflow:hidden}
+.hub-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* Sidebar sections */
+.sb-sec{padding:13px 15px;border-bottom:1px solid var(--bdr);flex-shrink:0}
+.sb-lbl{font-size:.5rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.code-big{font-family:var(--serif);font-size:1.85rem;font-weight:700;
+  color:var(--gold);letter-spacing:.22em;text-align:center;margin-bottom:7px}
+.link-row{display:flex;gap:5px}
+.link-in{flex:1;background:var(--bg);border:1px solid var(--bdr);color:var(--muted);
+  padding:5px 7px;border-radius:2px;font-size:.52rem;font-family:var(--mono);outline:none}
+.copy-btn{padding:5px 9px;background:var(--gold);color:#05100a;border:none;border-radius:2px;
+  cursor:pointer;font-size:.55rem;font-family:var(--mono);font-weight:600;transition:background .18s}
+.copy-btn:hover,.copy-btn.ok{background:var(--gold2)}
+
+/* Player chips */
+.pc-list{display:flex;flex-direction:column;gap:5px}
+.pc{display:flex;align-items:center;gap:8px;padding:8px 9px;
+  border-radius:3px;border:1px solid transparent;transition:all .15s;cursor:pointer}
+.pc:hover{background:var(--s2);border-color:var(--bdr)}
+.pc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pc-info{flex:1;min-width:0}
+.pc-name{font-size:.66rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-team{font-size:.52rem;color:var(--muted);letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-cnt{font-size:.52rem;color:var(--muted)}
+
+/* Hole grid */
+.hole-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.hb{background:var(--s2);border:1px solid var(--bdr);border-radius:2px;padding:5px 0;
+  text-align:center;cursor:pointer;transition:all .15s;font-size:.58rem;color:var(--muted);
+  font-family:var(--mono)}
+.hb:hover{border-color:var(--bdr2);color:var(--cream)}
+.hb.has{color:var(--green3);border-color:rgba(61,142,74,.3)}
+.hb.cur{background:var(--gold);color:#05100a;border-color:var(--gold);font-weight:700}
+
+/* Scrollable sidebar bottom */
+.sb-scroll{flex:1;overflow-y:auto;padding:13px 15px;display:flex;flex-direction:column;gap:12px}
+
+/* Tabs */
+.hub-tabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;background:var(--s1)}
+.htab{padding:10px 16px;font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;
+  background:transparent;border-top:none;border-left:none;border-right:none;font-family:var(--mono)}
+.htab:hover{color:var(--cream)}
+.htab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-pane{display:none;flex:1;overflow:auto;padding:16px 18px;flex-direction:column;gap:12px}
+.tab-pane.on{display:flex}
+
+/* Upload zone */
+.drop-zone{border:1px dashed rgba(201,170,78,.28);border-radius:5px;padding:22px;
+  text-align:center;cursor:pointer;transition:all .22s;background:rgba(255,255,255,.01);flex-shrink:0}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);background:rgba(201,170,78,.04)}
+.drop-zone input{display:none}
+.dz-i{font-size:1.7rem;margin-bottom:6px;opacity:.55}
+.dz-h{font-family:var(--serif);font-size:1.05rem;color:var(--gold2);margin-bottom:3px}
+.dz-p{font-size:.56rem;color:var(--muted);letter-spacing:.06em}
+
+/* Clip cards */
+.sec-h{font-size:.52rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sec-h::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.clip-card{display:grid;grid-template-columns:86px 1fr auto;background:var(--s1);
+  border:1px solid var(--bdr);border-radius:3px;overflow:hidden;
+  transition:border-color .18s;animation:fu .22s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.cc-thumb{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
+.cc-thumb video{width:100%;height:100%;object-fit:cover}
+.cc-dur{position:absolute;bottom:2px;right:3px;background:rgba(0,0,0,.65);
+  color:var(--gold2);font-size:.46rem;padding:1px 4px;border-radius:1px}
+.cc-star{position:absolute;top:3px;left:3px;font-size:.7rem;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.cc-body{padding:8px 12px;display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:0}
+.cc-name{font-size:.62rem;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.cc-tag{padding:2px 7px;border-radius:20px;font-size:.5rem;letter-spacing:.05em;border:1px solid;cursor:pointer}
+.cc-hole-tag{background:rgba(201,170,78,.1);border-color:rgba(201,170,78,.3);color:var(--gold2)}
+.cc-player-tag{border-color:var(--bdr2);color:var(--cream)}
+.cc-shot-tag{border-color:var(--bdr2);color:var(--muted)}
+.cc-role-tag{background:rgba(255,255,255,.04);border-color:var(--bdr);color:var(--muted)}
+.cc-star-tag{border-color:var(--bdr);color:var(--muted);cursor:pointer}
+.cc-star-tag.s1{border-color:#5a9fd5;color:#5a9fd5}
+.cc-star-tag.s2{border-color:var(--app);color:var(--app)}
+.cc-star-tag.s3{border-color:var(--gold);color:var(--gold)}
+.cc-actions{display:flex;align-items:center;padding:0 10px;flex-direction:column;gap:5px}
+.ic-btn{width:22px;height:22px;background:transparent;border:1px solid var(--bdr);
+  border-radius:2px;color:var(--muted);cursor:pointer;font-size:.65rem;
+  display:flex;align-items:center;justify-content:center;transition:all .15s}
+.ic-btn:hover{border-color:var(--red);color:var(--red)}
+.ic-btn.edit:hover{border-color:var(--gold);color:var(--gold)}
+
+/* Hole summary */
+.hs-card{background:var(--s1);border:1px solid var(--bdr);border-radius:4px;padding:14px;flex-shrink:0}
+.hs-h{font-family:var(--serif);font-size:.98rem;font-weight:700;color:var(--gold2);margin-bottom:10px}
+.hs-players{display:flex;flex-direction:column;gap:6px}
+.hs-pr{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:3px}
+.hsp-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.hsp-info{flex:1;min-width:0}
+.hsp-name{font-size:.64rem;color:var(--cream)}
+.hsp-team{font-size:.5rem;color:var(--muted);letter-spacing:.04em}
+.hsp-shots{display:flex;gap:3px;flex-wrap:wrap}
+.shot-pip{padding:1px 6px;border-radius:10px;font-size:.48rem;letter-spacing:.05em;text-transform:uppercase}
+
+/* Export grid */
+.exp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
+.exp-c{background:var(--s1);border:1px solid var(--bdr);border-radius:4px;
+  padding:14px;display:flex;flex-direction:column;gap:9px;transition:all .2s;cursor:pointer}
+.exp-c:hover{border-color:rgba(201,170,78,.35);transform:translateY(-2px)}
+.exp-c-i{font-size:1.4rem}
+.exp-c-t{font-family:var(--serif);font-size:.95rem;font-weight:700;color:var(--gold2)}
+.exp-c-d{font-size:.56rem;color:var(--muted);line-height:1.7}
+.exp-c-m{font-size:.52rem;color:var(--green3);letter-spacing:.06em}
+
+/* ══════════════════════════════════════════════
+   LT SETTINGS TAB
+══════════════════════════════════════════════ */
+.lt-panel{background:var(--s1);border:1px solid var(--bdr);border-radius:4px;padding:16px;
+  display:flex;flex-direction:column;gap:14px}
+.lt-panel-h{font-family:var(--serif);font-size:1rem;font-weight:700;color:var(--gold2)}
+.lt-preview{background:#000;border-radius:3px;position:relative;overflow:hidden;aspect-ratio:16/9;max-width:460px}
+.lt-preview-vid{width:100%;height:100%;object-fit:cover;display:block;opacity:.4}
+.lt-preview-overlay{position:absolute;inset:0;pointer-events:none}
+
+/* ══════════════════════════════════════════════
+   OUTPUT FORMAT SELECTOR
+══════════════════════════════════════════════ */
+.fmt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fmt-card{background:var(--s2);border:2px solid var(--bdr);border-radius:5px;
+  padding:12px 8px;cursor:pointer;text-align:center;transition:all .18s;
+  -webkit-user-select:none;user-select:none;display:flex;flex-direction:column;align-items:center;gap:7px}
+.fmt-card:hover{border-color:var(--bdr2)}
+.fmt-card.sel{border-color:var(--gold);background:rgba(201,170,78,.08)}
+.fmt-preview{display:flex;align-items:center;justify-content:center}
+.fmt-rect{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:2px;position:relative}
+.fmt-rect-inner{position:absolute;inset:2px;background:rgba(201,170,78,.15);border-radius:1px}
+/* 16:9 */
+.fmt-16-9{width:46px;height:26px}
+/* 9:16 */
+.fmt-9-16{width:26px;height:46px}
+/* 1:1 */
+.fmt-1-1{width:36px;height:36px}
+.fmt-label{font-size:.56rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;line-height:1.4}
+.fmt-card.sel .fmt-label{color:var(--cream)}
+.fmt-sub{font-size:.5rem;color:var(--dim);letter-spacing:.06em}
+.fmt-card.sel .fmt-sub{color:var(--muted)}
+
+/* ══════════════════════════════════════════════
+   EXPORT MODAL
+══════════════════════════════════════════════ */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);
+  z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.overlay.on{display:flex}
+.exp-modal{background:var(--s1);border:1px solid rgba(201,170,78,.2);border-radius:6px;
+  width:100%;max-width:800px;display:flex;flex-direction:column;margin:auto;flex-shrink:0}
+.em-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 17px;border-bottom:1px solid var(--bdr)}
+.em-t{font-family:var(--serif);font-size:1.05rem;color:var(--gold2)}
+.em-x{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;transition:color .15s}
+.em-x:hover{color:var(--cream)}
+.em-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.em-vid{width:100%;border-radius:3px;background:#000;display:block;max-height:380px}
+.em-seq{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto}
+.em-si{display:flex;align-items:center;gap:7px;padding:5px 9px;
+  background:var(--s2);border-radius:2px;font-size:.58rem}
+.em-sid{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.em-sil{flex:1;color:var(--cream)}
+.em-sib{color:var(--muted);font-size:.52rem}
+.em-foot{display:flex;gap:7px;justify-content:flex-end;padding:11px 16px;border-top:1px solid var(--bdr)}
+
+/* Progress */
+.prog-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);
+  z-index:400;align-items:center;justify-content:center}
+.prog-bg.on{display:flex}
+.prog-box{background:var(--s1);border:1px solid rgba(201,170,78,.2);border-radius:5px;
+  padding:26px 34px;max-width:380px;width:90%;text-align:center}
+.pb-t{font-family:var(--serif);font-size:1.15rem;color:var(--gold2);margin-bottom:3px}
+.pb-s{font-size:.58rem;color:var(--muted);letter-spacing:.08em;margin-bottom:17px;min-height:14px}
+.pb-bg{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-bottom:7px;overflow:hidden}
+.pb-f{height:100%;background:var(--gold);border-radius:2px;transition:width .33s;width:0}
+.pb-p{font-size:.55rem;color:var(--muted);letter-spacing:.1em}
+
+/* ══════════════════════════════════════════════
+   PHONE UPLOADER — large touch targets
+══════════════════════════════════════════════ */
+#v-phone{overflow:auto;background:
+  radial-gradient(ellipse at 30% 20%,rgba(45,107,56,.12),transparent 55%),var(--bg)}
+.ph-wrap{display:flex;flex-direction:column;align-items:center;padding:16px;gap:0;min-height:100%}
+.ph-card{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;
+  padding:20px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px}
+.ph-logo{font-family:var(--serif);font-size:1.3rem;font-weight:700;color:var(--gold);margin-bottom:2px}
+.ph-sub{font-size:.52rem;color:var(--muted);letter-spacing:.18em;text-transform:uppercase}
+.ph-session-box{background:var(--bg);border:1px solid rgba(201,170,78,.18);
+  border-radius:3px;padding:10px;text-align:center}
+.ph-code{font-family:var(--serif);font-size:1.75rem;font-weight:700;color:var(--gold);letter-spacing:.22em}
+
+/* Phone drop zone */
+.ph-drop{border:2px dashed rgba(201,170,78,.3);border-radius:6px;padding:24px 16px;
+  cursor:pointer;transition:all .22s;text-align:center;min-height:120px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ph-drop:hover,.ph-drop.drag-over{border-color:var(--gold);background:rgba(201,170,78,.05)}
+.ph-drop input{display:none}
+.ph-drop-i{font-size:2.2rem;margin-bottom:7px}
+.ph-drop-h{font-family:var(--serif);font-size:1.05rem;color:var(--gold2);margin-bottom:4px}
+.ph-drop-p{font-size:.57rem;color:var(--muted);line-height:1.7}
+
+.ph-clips{display:flex;flex-direction:column;gap:5px}
+.ph-clip-row{display:flex;align-items:center;gap:8px;background:var(--bg);
+  border:1px solid var(--bdr);border-radius:3px;padding:7px 10px}
+.ph-clip-name{flex:1;font-size:.6rem;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── BIG TAP SELECTORS ── */
+.tap-section{display:flex;flex-direction:column;gap:7px}
+.tap-lbl{font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+/* Player big buttons */
+.player-taps{display:flex;flex-direction:column;gap:6px}
+.player-tap{display:flex;align-items:center;gap:10px;padding:13px 14px;
+  background:var(--s2);border:2px solid var(--bdr);border-radius:5px;
+  cursor:pointer;transition:all .15s;-webkit-user-select:none;user-select:none}
+.player-tap:active{transform:scale(.97)}
+.player-tap.sel{border-color:var(--gold);background:rgba(201,170,78,.1)}
+.pt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pt-info{flex:1}
+.pt-name{font-size:.82rem;color:var(--cream);font-weight:500}
+.pt-team{font-size:.56rem;color:var(--muted);letter-spacing:.04em;margin-top:1px}
+.pt-check{font-size:.9rem;opacity:0;transition:opacity .15s}
+.player-tap.sel .pt-check{opacity:1}
+
+/* Shot type big buttons */
+.shot-taps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.shot-tap{padding:12px 8px;background:var(--s2);border:2px solid var(--bdr);border-radius:5px;
+  cursor:pointer;transition:all .15s;text-align:center;-webkit-user-select:none;user-select:none}
+.shot-tap:active{transform:scale(.95)}
+.shot-tap.sel{border-color:var(--gold);background:rgba(201,170,78,.1)}
+.st-icon{font-size:1.2rem;margin-bottom:4px}
+.st-label{font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.shot-tap.sel .st-label{color:var(--cream)}
+/* Hole-out gets its own prominent style */
+.shot-tap.hole-out-tap{grid-column:1/-1;border-color:rgba(201,170,78,.3);
+  background:rgba(201,170,78,.06);display:flex;align-items:center;justify-content:center;gap:10px;padding:14px}
+.shot-tap.hole-out-tap.sel{border-color:var(--gold);background:rgba(201,170,78,.18)}
+.hot-icon{font-size:1.5rem}
+.hot-label{font-size:.7rem;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+/* Celebration — paired with hole-out, full width, warm coral */
+.shot-tap.celeb-tap{grid-column:1/-1;border-color:rgba(232,118,90,.3);
+  background:rgba(232,118,90,.06);display:flex;align-items:center;justify-content:center;gap:10px;padding:14px}
+.shot-tap.celeb-tap.sel{border-color:#e8765a;background:rgba(232,118,90,.16)}
+.celeb-label{font-size:.7rem;color:#e8765a;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.hole-out-pair{display:flex;flex-direction:column;gap:6px}
+
+/* Hero override toggle — appears under hole-out / celebration shot selection */
+.hero-toggle{display:flex;align-items:center;gap:12px;padding:14px;
+  background:rgba(232,118,90,.07);border:2px solid rgba(232,118,90,.25);
+  border-radius:5px;cursor:pointer;transition:all .18s;
+  -webkit-user-select:none;user-select:none}
+.hero-toggle.on{border-color:#e8765a;background:rgba(232,118,90,.14)}
+.ht-switch{width:38px;height:22px;border-radius:11px;border:2px solid rgba(255,255,255,.15);
+  background:var(--s3);flex-shrink:0;position:relative;transition:all .2s}
+.hero-toggle.on .ht-switch{background:#e8765a;border-color:#e8765a}
+.ht-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;
+  border-radius:50%;background:#fff;transition:transform .2s;opacity:.5}
+.hero-toggle.on .ht-knob{transform:translateX(16px);opacity:1}
+.ht-text{flex:1}
+.ht-title{font-size:.7rem;color:var(--cream);font-weight:500;margin-bottom:2px}
+.ht-desc{font-size:.55rem;color:var(--muted);line-height:1.55}
+.hole-taps{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.hole-tap{padding:10px 4px;background:var(--s2);border:2px solid var(--bdr);border-radius:4px;
+  text-align:center;cursor:pointer;font-size:.72rem;color:var(--muted);
+  transition:all .15s;-webkit-user-select:none;user-select:none;font-family:var(--mono)}
+.hole-tap:active{transform:scale(.92)}
+.hole-tap.sel{background:var(--gold);border-color:var(--gold);color:#05100a;font-weight:700}
+
+/* Role taps */
+.role-taps{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.role-tap{padding:13px 10px;background:var(--s2);border:2px solid var(--bdr);border-radius:5px;
+  text-align:center;cursor:pointer;transition:all .15s;-webkit-user-select:none;user-select:none}
+.role-tap:active{transform:scale(.95)}
+.role-tap.sel{border-color:var(--gold2);background:rgba(201,170,78,.08)}
+.rt-icon{font-size:1.2rem;margin-bottom:4px}
+.rt-label{font-size:.6rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.role-tap.sel .rt-label{color:var(--cream)}
+
+/* Star rating taps */
+.star-taps{display:flex;gap:8px}
+.star-tap{flex:1;padding:12px 6px;background:var(--s2);border:2px solid var(--bdr);
+  border-radius:5px;text-align:center;cursor:pointer;transition:all .15s;
+  -webkit-user-select:none;user-select:none}
+.star-tap:active{transform:scale(.95)}
+.star-tap.sel-1{border-color:var(--tee);background:rgba(90,159,213,.1)}
+.star-tap.sel-2{border-color:var(--app);background:rgba(208,138,30,.1)}
+.star-tap.sel-3{border-color:var(--gold);background:rgba(201,170,78,.12)}
+.star-tap-i{font-size:1.1rem;margin-bottom:3px}
+.star-tap-l{font-size:.5rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+/* Phone clips multi-select (one tag set applies to all clips) */
+.apply-note{font-size:.56rem;color:var(--muted);line-height:1.7;
+  background:var(--s2);border-radius:3px;padding:8px 10px}
+
+/* Submitted */
+.ph-done{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;padding:14px}
+.ph-done-i{font-size:2.8rem}
+.ph-done-h{font-family:var(--serif);font-size:1.15rem;color:var(--gold2)}
+.ph-done-p{font-size:.6rem;color:var(--muted);line-height:1.8}
+
+/* toast */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(46px);
+  background:var(--s2);border:1px solid rgba(201,170,78,.2);color:var(--cream);
+  padding:8px 15px;border-radius:20px;font-size:.58rem;letter-spacing:.06em;
+  z-index:9998;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.toast.on{transform:translateX(-50%) translateY(0)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div class="view on" id="v-land">
+  <div class="land-inner">
+    <div class="land-kicker">⛳ College Golf · Tournament Coverage</div>
+    <h1 class="land-h">Golf Broadcast<br><em>Studio</em></h1>
+    <p class="land-p">Full-round coverage for two filmers and a three-player pairing. Tag shots on-course, export per-hole highlights live, build end-of-round player reels.</p>
+    <div class="land-grid">
+      <div class="land-card" onclick="show('v-setup')">
+        <div class="lc-i">🎬</div>
+        <div class="lc-t">New Round Session</div>
+        <div class="lc-d">Set up players with name and school, configure lower-third graphics, share with your co-filmer.</div>
+      </div>
+      <div class="land-card" onclick="showJoinRow()">
+        <div class="lc-i">📱</div>
+        <div class="lc-t">Join &amp; Upload</div>
+        <div class="lc-d">Have a session code? Upload clips from this phone with large tap-friendly controls.</div>
+      </div>
+    </div>
+    <div class="land-or">— or run everything on one device —</div>
+    <div style="display:flex;justify-content:center;margin-bottom:12px">
+      <button class="btn btn-outline" onclick="show('v-setup')">Solo / Single device →</button>
+    </div>
+    <div class="join-row" id="joinRow" style="display:none">
+      <input class="ti" id="joinInput" placeholder="Session code" maxlength="6" style="text-transform:uppercase">
+      <button class="btn btn-gold" onclick="doJoin()">Join →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="view" id="v-setup">
+  <div class="hdr">
+    <div class="logo">Golf Studio<span class="logo-sub">Setup</span></div>
+    <div class="hdr-gap"></div>
+    <button class="btn btn-ghost btn-sm" onclick="show('v-land')">← Back</button>
+  </div>
+  <div class="setup-body">
+    <div class="setup-card">
+      <div>
+        <div class="setup-h">Round Setup</div>
+        <div class="setup-desc">Configure your pairing, lower-third graphics, and filmer roles before the round begins.</div>
+      </div>
+
+      <!-- Tournament -->
+      <div class="fg">
+        <div class="fl">Tournament / Event Name</div>
+        <input class="ti-w" id="sTournament" placeholder="e.g. NCAA Regionals — Round 1">
+      </div>
+
+      <!-- Players -->
+      <div class="fg">
+        <div class="fl">Players in pairing</div>
+        <div class="player-setup-list" id="playerSetupList"></div>
+        <div style="display:flex;gap:7px;margin-top:4px">
+          <button class="btn btn-ghost btn-sm" onclick="addPlayerRow()">+ Add player</button>
+        </div>
+      </div>
+
+      <!-- Holes -->
+      <div class="fg">
+        <div class="fl">Holes in round</div>
+        <div class="holes-toggle">
+          <button class="ht-btn" id="h9" onclick="setHoles(9)">9 holes</button>
+          <button class="ht-btn active" id="h18" onclick="setHoles(18)">18 holes</button>
+        </div>
+      </div>
+
+      <!-- Lower Third Style -->
+      <div class="fg">
+        <div class="fl">Lower-third style</div>
+        <div class="lt-presets" id="ltPresets">
+          <div class="ltp active" data-style="broadcast" onclick="setLTStyle('broadcast',this)">Broadcast bar</div>
+          <div class="ltp" data-style="minimal" onclick="setLTStyle('minimal',this)">Minimal overlay</div>
+          <div class="ltp" data-style="none" onclick="setLTStyle('none',this)">No graphics</div>
+        </div>
+      </div>
+
+      <!-- Lower Third Fields -->
+      <div class="fg" id="ltFieldsWrap">
+        <div class="fl">Show in lower-third</div>
+        <div class="lt-toggles" id="ltToggles"></div>
+      </div>
+
+      <div class="setup-footer">
+        <button class="btn btn-outline btn-sm" onclick="show('v-land')">Cancel</button>
+        <button class="btn btn-gold" onclick="createSession()">Create Session →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE SCREEN -->
+<div class="view" id="v-share">
+  <div class="share-card">
+    <div>
+      <div class="share-kicker">⛳ Session ready</div>
+      <div class="share-h">Share with your<br>co-filmer</div>
+      <div class="share-tournament" id="shareTournament">—</div>
+    </div>
+
+    <!-- Big code -->
+    <div class="share-code-wrap">
+      <div class="share-code-lbl">Session Code</div>
+      <div class="share-code" id="shareCode">——</div>
+      <div class="share-code-sub">Your co-filmer enters this on the Join screen</div>
+    </div>
+
+    <!-- QR -->
+    <div class="share-qr-wrap">
+      <div id="shareQR" style="border-radius:4px;overflow:hidden;line-height:0"></div>
+      <div class="share-qr-lbl">Or scan to open the upload page directly</div>
+    </div>
+
+    <!-- Copy link -->
+    <div class="share-link-row">
+      <input class="share-link-in" id="shareLinkIn" readonly>
+      <button class="copy-btn" id="shareCopyBtn" onclick="copyShareLink()">Copy link</button>
+    </div>
+
+    <!-- Players summary -->
+    <div>
+      <div style="font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">Pairing</div>
+      <div class="share-players" id="sharePlayers"></div>
+    </div>
+
+    <div class="share-note">
+      Your co-filmer opens the link or goes to this app and taps <strong style="color:var(--cream)">Join &amp; Upload</strong>, then enters the code above. They don't need to set anything up — just join, film, and tag shots.
+    </div>
+
+    <!-- Warning shown only when running as a local file -->
+    <div id="localFileWarning" style="display:none;background:rgba(160,40,24,.12);border:1px solid rgba(160,40,24,.35);border-radius:4px;padding:12px 14px;text-align:left">
+      <div style="font-size:.6rem;color:#e08070;font-weight:600;margin-bottom:5px;letter-spacing:.06em">⚠ Running as a local file</div>
+      <div style="font-size:.56rem;color:#b07060;line-height:1.75">
+        The session link won't work on other devices because this file is running locally on your computer — there's no server to connect to.<br><br>
+        <strong style="color:#e08070">Host it online first</strong> — see the deployment instructions below the main button — then the QR code and link will work for your co-filmer.
+      </div>
+    </div>
+
+    <div class="share-actions">
+      <button class="btn btn-gold" style="width:100%;padding:13px;font-size:.66rem" onclick="enterHub()">
+        I'm ready — start filming →
+      </button>
+      <button class="btn btn-ghost btn-sm" style="width:100%" onclick="show('v-setup')">
+        ← Back to setup
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN HUB -->
+<div class="view" id="v-hub">
+  <div class="hdr">
+    <div class="logo">Golf Studio<span class="logo-sub" id="hTournament">—</span></div>
+    <div class="badge">Session <b id="hCode">—</b></div>
+    <div class="badge">Hole <b id="hHole">1</b></div>
+    <div class="hdr-gap"></div>
+    <div class="hdr-btns">
+      <button class="btn btn-ghost btn-sm" onclick="switchTab('settings')">⚙ Graphics</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchTab('exports')">📤 Exports</button>
+      <button class="btn btn-gold btn-sm" onclick="openExport('hole')">Export Hole →</button>
+    </div>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+    <div class="hub-sidebar">
+      <div class="sb-sec">
+        <div class="sb-lbl">Session</div>
+        <div class="code-big" id="sbCode">——</div>
+        <div class="link-row">
+          <input class="link-in" id="sbLink" readonly>
+          <button class="copy-btn" id="sbCopy" onclick="copyLink()">Copy</button>
+        </div>
+        <div id="qrC" style="display:block;margin:9px auto 3px;line-height:0;width:108px"></div>
+        <div style="text-align:center;font-size:.48rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Scan to join on phone</div>
+      </div>
+      <div class="sb-sec" style="flex-shrink:0">
+        <div class="sb-lbl">Players</div>
+        <div class="pc-list" id="pcList"></div>
+      </div>
+      <div class="sb-scroll">
+        <div class="sb-lbl">Holes</div>
+        <div class="hole-grid" id="holeGrid"></div>
+      </div>
+    </div>
+    <div class="hub-content">
+      <div class="hub-tabs">
+        <button class="htab on" id="tab-clips" onclick="switchTab('clips')">📹 Clips</button>
+        <button class="htab" id="tab-hole" onclick="switchTab('hole')">⛳ Hole</button>
+        <button class="htab" id="tab-exports" onclick="switchTab('exports')">📤 Exports</button>
+        <button class="htab" id="tab-settings" onclick="switchTab('settings')">⚙ Graphics</button>
+      </div>
+      <!-- CLIPS -->
+      <div class="tab-pane on" id="tp-clips">
+        <div class="drop-zone" id="hubDrop">
+          <input type="file" id="hubFile" accept="video/*" multiple>
+          <div class="dz-i">📹</div>
+          <div class="dz-h">Add clips for Hole <span id="uzHole">1</span></div>
+          <div class="dz-p">Drag &amp; drop or click · MOV · MP4 · HEVC</div>
+        </div>
+        <div id="clipsWrap" style="display:none;flex-direction:column;gap:8px">
+          <div class="sec-h" id="clipsHdr">0 clips</div>
+          <div id="clipList"></div>
+        </div>
+        <div id="noClips" style="display:none;text-align:center;padding:28px;
+          font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase">
+          No clips for this hole yet
+        </div>
+      </div>
+      <!-- HOLE SUMMARY -->
+      <div class="tab-pane" id="tp-hole">
+        <div class="hs-card" id="holeCard"></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap" id="holeExportBtns"></div>
+      </div>
+      <!-- EXPORTS -->
+      <div class="tab-pane" id="tp-exports">
+        <div style="font-size:.58rem;color:var(--muted);line-height:1.85;letter-spacing:.04em">
+          Export per-hole highlights to post live, or build full player reels at end of round. ★★★ clips are auto-prioritized in the round highlight.
+        </div>
+        <div class="exp-grid" id="expGrid"></div>
+      </div>
+      <!-- GRAPHICS SETTINGS -->
+      <div class="tab-pane" id="tp-settings">
+        <div class="lt-panel" id="ltPanel"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHONE UPLOADER -->
+<div class="view" id="v-phone">
+  <div class="ph-wrap">
+    <div class="ph-card" id="phCard">
+      <div>
+        <div class="ph-logo">⛳ Golf Studio</div>
+        <div class="ph-sub">Filmer Uploader</div>
+      </div>
+      <div class="ph-session-box">
+        <div style="font-size:.48rem;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px">Session</div>
+        <div class="ph-code" id="phCode">——</div>
+      </div>
+      <!-- Drop zone -->
+      <div class="ph-drop" id="phDrop">
+        <input type="file" id="phFile" accept="video/*" multiple capture="environment">
+        <div class="ph-drop-i">🎬</div>
+        <div class="ph-drop-h">Tap to add clips</div>
+        <div class="ph-drop-p">Select all clips from this hole.<br>You'll tag them below.</div>
+      </div>
+      <div class="ph-clips" id="phClips" style="display:none"></div>
+
+      <!-- Tagging UI (shown after files selected) -->
+      <div id="phTagUI" style="display:none;flex-direction:column;gap:14px">
+
+        <div class="apply-note">Tags below apply to all selected clips. You can add more clips for the same tags after submitting.</div>
+
+        <!-- Role -->
+        <div class="tap-section">
+          <div class="tap-lbl">Your camera role</div>
+          <div class="role-taps" id="phRoleTaps">
+            <div class="role-tap sel" data-role="swing" onclick="setPhRole('swing',this)">
+              <div class="rt-icon">🏌</div>
+              <div class="rt-label">Swing Cam</div>
+            </div>
+            <div class="role-tap" data-role="landing" onclick="setPhRole('landing',this)">
+              <div class="rt-icon">🎯</div>
+              <div class="rt-label">Landing Cam</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hole -->
+        <div class="tap-section">
+          <div class="tap-lbl">Hole number</div>
+          <div class="hole-taps" id="phHoleTaps"></div>
+        </div>
+
+        <!-- Shot type -->
+        <div class="tap-section">
+          <div class="tap-lbl">Shot type</div>
+          <div class="shot-taps" id="phShotTaps"></div>
+        </div>
+
+        <!-- Hero override — shown when Hole Out or Celebration is selected -->
+        <div class="tap-section" id="phHeroSection" style="display:none">
+          <div class="hero-toggle" id="phHeroToggle" onclick="togglePhHero()">
+            <div class="ht-switch"><div class="ht-knob"></div></div>
+            <div class="ht-text">
+              <div class="ht-title">🎬 Hero shot treatment</div>
+              <div class="ht-desc">Use cinematic overlay — big player name, warm vignette.<br>Good for chip-ins, long putts, or anything worth celebrating.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player -->
+        <div class="tap-section">
+          <div class="tap-lbl">Player (if filming one player)</div>
+          <div class="player-taps" id="phPlayerTaps">
+            <div class="player-tap" data-player="" onclick="setPhPlayer('',this)">
+              <div class="pt-dot" style="background:var(--muted)"></div>
+              <div class="pt-info"><div class="pt-name">All / Mixed</div><div class="pt-team">Multiple players in clip</div></div>
+              <div class="pt-check">✓</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Star rating -->
+        <div class="tap-section">
+          <div class="tap-lbl">Highlight rating</div>
+          <div class="star-taps" id="phStarTaps">
+            <div class="star-tap" data-stars="1" onclick="setPhStars(1,this)">
+              <div class="star-tap-i">⭐</div>
+              <div class="star-tap-l">Good</div>
+            </div>
+            <div class="star-tap" data-stars="2" onclick="setPhStars(2,this)">
+              <div class="star-tap-i">⭐⭐</div>
+              <div class="star-tap-l">Great</div>
+            </div>
+            <div class="star-tap" data-stars="3" onclick="setPhStars(3,this)">
+              <div class="star-tap-i">⭐⭐⭐</div>
+              <div class="star-tap-l">Best</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-gold" style="width:100%;padding:14px;font-size:.68rem" id="phSubmitBtn" disabled onclick="phSubmit()">
+        Send to Session →
+      </button>
+    </div>
+    <div class="ph-card" id="phDoneCard" style="display:none">
+      <div class="ph-done">
+        <div class="ph-done-i">✅</div>
+        <div class="ph-done-h">Clips sent!</div>
+        <div class="ph-done-p">Your clips are in the session.<br>The host will build the highlight.<br><br>You can close this tab.</div>
+      </div>
+      <button class="btn btn-outline" style="width:100%" onclick="phReset()">Add more clips →</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="overlay" id="expOverlay">
+  <div class="exp-modal">
+    <div class="em-hdr">
+      <div class="em-t" id="emTitle">Export</div>
+      <button class="em-x" onclick="closeExport()">✕</button>
+    </div>
+    <div class="em-body">
+      <video class="em-vid" id="emVid" controls playsinline style="display:none"></video>
+
+      <!-- Output format selector -->
+      <div id="emFormatWrap">
+        <div style="font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">Output format</div>
+        <div class="fmt-grid">
+          <div class="fmt-card sel" data-fmt="16:9" onclick="setExportFmt('16:9',this)">
+            <div class="fmt-preview">
+              <div class="fmt-rect fmt-16-9"><div class="fmt-rect-inner"></div></div>
+            </div>
+            <div class="fmt-label">16 : 9</div>
+            <div class="fmt-sub">Landscape · YouTube · Twitter</div>
+          </div>
+          <div class="fmt-card" data-fmt="9:16" onclick="setExportFmt('9:16',this)">
+            <div class="fmt-preview">
+              <div class="fmt-rect fmt-9-16"><div class="fmt-rect-inner"></div></div>
+            </div>
+            <div class="fmt-label">9 : 16</div>
+            <div class="fmt-sub">Portrait · Reels · TikTok</div>
+          </div>
+          <div class="fmt-card" data-fmt="1:1" onclick="setExportFmt('1:1',this)">
+            <div class="fmt-preview">
+              <div class="fmt-rect fmt-1-1"><div class="fmt-rect-inner"></div></div>
+            </div>
+            <div class="fmt-label">1 : 1</div>
+            <div class="fmt-sub">Square · Instagram feed</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:.58rem;color:var(--muted);line-height:1.8" id="emDesc">—</div>
+      <div id="emSeqWrap" style="display:none">
+        <div style="font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:5px">Clip sequence</div>
+        <div class="em-seq" id="emSeq"></div>
+      </div>
+    </div>
+    <div class="em-foot">
+      <button class="btn btn-outline btn-sm" onclick="closeExport()">Cancel</button>
+      <button class="btn btn-gold btn-sm" id="emRender" onclick="startRender()">⬛ Render &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="prog-bg" id="progBG">
+  <div class="prog-box">
+    <div class="pb-t">Rendering</div>
+    <div class="pb-s" id="pbSub">Preparing…</div>
+    <div class="pb-bg"><div class="pb-f" id="pbFill"></div></div>
+    <div class="pb-p" id="pbPct">0%</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════
+const SHOTS=[
+  {key:'tee',   label:'Tee Shot',    icon:'🏌',color:'#5a9fd5',order:0,ideal:4.5},
+  {key:'fair',  label:'Fairway',     icon:'🌿',color:'#46a858',order:1,ideal:3.5},
+  {key:'app',   label:'Approach',    icon:'🎯',color:'#d08a1e',order:2,ideal:3.5},
+  {key:'chip',  label:'Chip',        icon:'🔶',color:'#a450b0',order:3,ideal:3},
+  {key:'putt',  label:'Putt',        icon:'⛳',color:'#34a8b6',order:4,ideal:4},
+  {key:'hole',  label:'Hole Out',    icon:'🏆',color:'#c9aa4e',order:5,ideal:5},
+  {key:'celeb', label:'Celebration', icon:'🎉',color:'#e8765a',order:6,ideal:4,hero:true},
+];
+const SHOT_MAP=Object.fromEntries(SHOTS.map(s=>[s.key,s]));
+const ROLES=[
+  {key:'swing',  label:'Swing Cam',  icon:'🏌',order:0},
+  {key:'landing',label:'Landing Cam',icon:'🎯',order:1},
+];
+const ROLE_MAP=Object.fromEntries(ROLES.map(r=>[r.key,r]));
+const P_COLORS=['#c9aa4e','#46a858','#5a9fd5','#a450b0','#d08a1e'];
+const STAR_ICONS=['','⭐','⭐⭐','⭐⭐⭐'];
+
+const LT_FIELDS=[
+  {key:'playerName', label:'Player Name', default:true},
+  {key:'teamName',   label:'School / Team', default:true},
+  {key:'shotType',   label:'Shot Type', default:true},
+  {key:'holeNum',    label:'Hole Number', default:true},
+  {key:'tournament', label:'Tournament Name', default:true},
+  {key:'role',       label:'Camera Role', default:false},
+  {key:'stars',      label:'Star Rating', default:false},
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let R={
+  code:null, tournament:'',
+  players:[],   // [{name,team,color}]
+  holes:18,
+  clips:[],     // {id,name,file,url,dur,hole,player,team,shotKey,role,stars,trimStart,trimEnd}
+  currentHole:1,
+  lt:{style:'broadcast', fields:Object.fromEntries(LT_FIELDS.map(f=>[f.key,f.default]))},
+  exportQueue:null,
+};
+
+// Setup state
+let _setupPlayers=[];
+let _setupHoles=18;
+let _setupLTStyle='broadcast';
+let _setupLTFields=Object.fromEntries(LT_FIELDS.map(f=>[f.key,f.default]));
+
+// Phone state
+let phFiles=[], phRole='swing', phHole=1, phShot='tee', phPlayer='', phStars=0, phHeroOverride=false;
+let toastT;
+
+// ══════════════════════════════════════════════
+// ROUTING
+// ══════════════════════════════════════════════
+function show(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+
+(function init(){
+  buildSetupPlayerRows(3);
+  buildLTToggles();
+  const p=new URLSearchParams(location.search);
+  const code=p.get('session');
+  if(code){ R.code=code.toUpperCase(); document.getElementById('phCode').textContent=R.code; show('v-phone'); initPhone(); }
+})();
+
+function showJoinRow(){
+  const r=document.getElementById('joinRow');
+  r.style.display=r.style.display==='none'?'flex':'none';
+  if(r.style.display!=='none') document.getElementById('joinInput').focus();
+}
+function doJoin(){
+  const c=document.getElementById('joinInput').value.toUpperCase().trim();
+  if(c.length<4){toast('Enter a valid code');return;}
+  R.code=c; document.getElementById('phCode').textContent=c;
+  show('v-phone'); initPhone();
+}
+
+// ══════════════════════════════════════════════
+// SETUP
+// ══════════════════════════════════════════════
+function buildSetupPlayerRows(n){
+  _setupPlayers=Array.from({length:n},(_,i)=>({name:'',team:''}));
+  renderSetupRows();
+}
+function renderSetupRows(){
+  const list=document.getElementById('playerSetupList'); list.innerHTML='';
+  _setupPlayers.forEach((p,i)=>{
+    const d=document.createElement('div'); d.className='psr';
+    d.innerHTML=`<div class="psr-num">${i+1}</div>
+      <div class="psr-row">
+        <div class="fg"><div class="fl">Player name</div>
+          <input class="ti-w" placeholder="First Last" value="${p.name}"
+            oninput="_setupPlayers[${i}].name=this.value" style="font-size:.7rem;padding:8px 10px">
+        </div>
+        <div class="fg"><div class="fl">School / Team</div>
+          <input class="ti-w" placeholder="University name" value="${p.team}"
+            oninput="_setupPlayers[${i}].team=this.value" style="font-size:.7rem;padding:8px 10px">
+        </div>
+      </div>
+      ${_setupPlayers.length>1?`<div class="psr-add"><button class="btn btn-ghost btn-xs" onclick="removePlayerRow(${i})">✕ Remove</button></div>`:''}`;
+    list.appendChild(d);
+  });
+}
+function addPlayerRow(){
+  if(_setupPlayers.length>=5){toast('Max 5 players');return;}
+  _setupPlayers.push({name:'',team:''});
+  renderSetupRows();
+}
+function removePlayerRow(i){ _setupPlayers.splice(i,1); renderSetupRows(); }
+
+function setHoles(n){
+  _setupHoles=n;
+  ['h9','h18'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('h'+n).classList.add('active');
+}
+
+function setLTStyle(style,el){
+  _setupLTStyle=style;
+  document.querySelectorAll('.ltp').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ltFieldsWrap').style.display=style==='none'?'none':'';
+}
+
+function buildLTToggles(){
+  const wrap=document.getElementById('ltToggles'); wrap.innerHTML='';
+  LT_FIELDS.forEach(f=>{
+    const d=document.createElement('div');
+    d.className='lt-toggle'+(_setupLTFields[f.key]?' on':'');
+    d.onclick=()=>{
+      _setupLTFields[f.key]=!_setupLTFields[f.key];
+      d.classList.toggle('on',_setupLTFields[f.key]);
+      d.querySelector('.ltt-check').textContent=_setupLTFields[f.key]?'✓':'';
+    };
+    d.innerHTML=`<div class="ltt-check">${_setupLTFields[f.key]?'✓':''}</div>
+      <div class="ltt-label">${f.label}</div>`;
+    wrap.appendChild(d);
+  });
+}
+
+function createSession(){
+  const players=_setupPlayers.map((p,i)=>({
+    name:p.name.trim()||`Player ${i+1}`,
+    team:p.team.trim()||'',
+    color:P_COLORS[i]
+  })).filter((_,i)=>_setupPlayers[i].name.trim()||i===0);
+  if(!players.length){toast('Add at least one player');return;}
+  R.players=players;
+  R.tournament=document.getElementById('sTournament').value.trim()||'Round';
+  R.holes=_setupHoles;
+  R.code=randCode();
+  R.clips=[]; R.currentHole=1;
+  R.lt={style:_setupLTStyle, fields:{..._setupLTFields}};
+  initHub();
+  showShare();
+}
+
+function showShare(){
+  const link=location.href.split('?')[0]+'?session='+R.code;
+  document.getElementById('shareCode').textContent=R.code;
+  document.getElementById('shareTournament').textContent=R.tournament;
+  document.getElementById('shareLinkIn').value=link;
+  drawQR(R.code,link,'shareQR',160);
+  // qrcode.js renders async — apply sizing once the img tag is injected
+  setTimeout(()=>{
+    const img=document.querySelector('#shareQR img,#shareQR canvas');
+    if(img){ img.style.display='block'; img.style.width='160px'; img.style.height='160px'; }
+  },100);
+
+  const wrap=document.getElementById('sharePlayers'); wrap.innerHTML='';
+  R.players.forEach(p=>{
+    const d=document.createElement('div'); d.className='share-player-row';
+    d.innerHTML=`<div class="sp-dot" style="background:${p.color}"></div>
+      <div class="sp-name">${p.name}</div>
+      <div class="sp-team">${p.team||'—'}</div>`;
+    wrap.appendChild(d);
+  });
+
+  show('v-share');
+  // Warn if running as a local file — session links won't work cross-device
+  const isLocal = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  document.getElementById('localFileWarning').style.display = isLocal ? '' : 'none';
+}
+
+function copyShareLink(){
+  navigator.clipboard.writeText(document.getElementById('shareLinkIn').value).catch(()=>{});
+  const btn=document.getElementById('shareCopyBtn');
+  btn.textContent='✓ Copied'; btn.classList.add('ok');
+  setTimeout(()=>{ btn.textContent='Copy link'; btn.classList.remove('ok'); },2000);
+  toast('Link copied!');
+}
+
+function enterHub(){
+  show('v-hub');
+}
+
+// ══════════════════════════════════════════════
+// HUB
+// ══════════════════════════════════════════════
+function initHub(){
+  document.getElementById('hTournament').textContent=R.tournament;
+  document.getElementById('hCode').textContent=R.code;
+  document.getElementById('sbCode').textContent=R.code;
+  const link=location.href.split('?')[0]+'?session='+R.code;
+  document.getElementById('sbLink').value=link;
+  drawQR(R.code,link,'qrC',108);
+  buildPC(); buildHoleGrid(); setHole(1);
+  buildExpGrid(); buildLTPanel();
+
+  const drop=document.getElementById('hubDrop'),inp=document.getElementById('hubFile');
+  drop.onclick=()=>inp.click();
+  inp.onchange=e=>ingest(e.target.files);
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag-over')};
+  drop.ondragleave=()=>drop.classList.remove('drag-over');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag-over');ingest(e.dataTransfer.files)};
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(document.getElementById('sbLink').value).catch(()=>{});
+  const b=document.getElementById('sbCopy'); b.textContent='✓'; b.classList.add('ok');
+  setTimeout(()=>{b.textContent='Copy';b.classList.remove('ok');},2000);
+  toast('Link copied!');
+}
+
+function buildPC(){
+  const wrap=document.getElementById('pcList'); wrap.innerHTML='';
+  R.players.forEach((p,i)=>{
+    const n=R.clips.filter(c=>c.player===p.name).length;
+    const d=document.createElement('div'); d.className='pc'; d.id='pc-'+i;
+    d.innerHTML=`<div class="pc-dot" style="background:${p.color}"></div>
+      <div class="pc-info">
+        <div class="pc-name">${p.name}</div>
+        <div class="pc-team">${p.team||'—'}</div>
+      </div>
+      <div class="pc-cnt" id="pcc-${i}">${n}</div>`;
+    wrap.appendChild(d);
+  });
+}
+
+function buildHoleGrid(){
+  const g=document.getElementById('holeGrid'); g.innerHTML='';
+  for(let h=1;h<=R.holes;h++){
+    const b=document.createElement('button'); b.className='hb'; b.id='hb-'+h; b.textContent=h;
+    b.onclick=()=>setHole(h); g.appendChild(b);
+  }
+  refreshHoleGrid();
+}
+
+function refreshHoleGrid(){
+  for(let h=1;h<=R.holes;h++){
+    const b=document.getElementById('hb-'+h); if(!b) continue;
+    b.className='hb'+(R.clips.some(c=>c.hole===h)?' has':'')+(h===R.currentHole?' cur':'');
+  }
+}
+
+function setHole(h){
+  R.currentHole=h;
+  document.getElementById('hHole').textContent=h;
+  document.getElementById('uzHole').textContent=h;
+  refreshHoleGrid();
+  renderClipList();
+  renderHoleSummary();
+}
+
+function switchTab(name){
+  ['clips','hole','exports','settings'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('on',t===name);
+    document.getElementById('tp-'+t).classList.toggle('on',t===name);
+  });
+  if(name==='hole') renderHoleSummary();
+  if(name==='exports') buildExpGrid();
+  if(name==='settings') buildLTPanel();
+}
+
+// ══════════════════════════════════════════════
+// CLIP INGEST & RENDER
+// ══════════════════════════════════════════════
+async function ingest(files){
+  for(const f of Array.from(files)){
+    if(!f.type.startsWith('video/')) continue;
+    const url=URL.createObjectURL(f);
+    const pl=R.players[0]||{name:'',team:''};
+    const clip={id:uid(),name:f.name.replace(/\.[^.]+$/,''),file:f,url,
+      dur:0,hole:R.currentHole,player:pl.name,team:pl.team,
+      shotKey:'tee',role:'swing',stars:0,trimStart:0,trimEnd:null};
+    R.clips.push(clip);
+    clip.dur=await vidDur(url);
+    clip.trimEnd=clip.dur;
+    renderClipList(); refreshHoleGrid(); updatePC(); buildExpGrid();
+  }
+}
+
+function renderClipList(){
+  const hc=R.clips.filter(c=>c.hole===R.currentHole);
+  const wrap=document.getElementById('clipsWrap'),noMsg=document.getElementById('noClips'),list=document.getElementById('clipList');
+  if(!hc.length){ wrap.style.display='none'; noMsg.style.display=''; return; }
+  wrap.style.display='flex'; noMsg.style.display='none';
+  document.getElementById('clipsHdr').textContent=`Hole ${R.currentHole} — ${hc.length} clip${hc.length!==1?'s':''}`;
+  list.innerHTML='';
+  const sorted=[...hc].sort((a,b)=>{
+    const so=(SHOT_MAP[a.shotKey]?.order??99)-(SHOT_MAP[b.shotKey]?.order??99);
+    if(so!==0) return so;
+    return (ROLE_MAP[a.role]?.order??0)-(ROLE_MAP[b.role]?.order??0);
+  });
+  sorted.forEach(c=>list.appendChild(makeClipCard(c)));
+}
+
+function makeClipCard(clip){
+  const row=document.createElement('div'); row.className='clip-card'; row.id='cc-'+clip.id;
+  const st=SHOT_MAP[clip.shotKey];
+  const pl=R.players.find(p=>p.name===clip.player);
+  const pColor=pl?.color||'var(--muted)';
+  const starClass=clip.stars>0?'s'+clip.stars:'';
+  row.innerHTML=`
+    <div class="cc-thumb">
+      <video src="${clip.url}" muted preload="metadata"></video>
+      <div class="cc-dur">${fmt(clip.dur)}</div>
+      ${clip.stars?`<div class="cc-star">${STAR_ICONS[clip.stars]}</div>`:''}
+    </div>
+    <div class="cc-body">
+      <div class="cc-name">${clip.name}</div>
+      <div class="cc-meta">
+        <div class="cc-tag cc-hole-tag">H${clip.hole}</div>
+        <div class="cc-tag cc-player-tag" style="border-color:${pColor}55;color:${pColor}">${clip.player||'—'}</div>
+        <div class="cc-tag cc-shot-tag" style="border-color:${st.color}55;color:${st.color}">${st.icon} ${st.label}</div>
+        <div class="cc-tag cc-role-tag">${ROLE_MAP[clip.role]?.icon||''} ${ROLE_MAP[clip.role]?.label||''}</div>
+        <div class="cc-tag cc-star-tag ${starClass}" onclick="cycleStars('${clip.id}')">${clip.stars?STAR_ICONS[clip.stars]:'☆ Rate'}</div>
+      </div>
+    </div>
+    <div class="cc-actions">
+      <button class="ic-btn edit" title="Edit tags" onclick="editClipInline('${clip.id}')">✎</button>
+      <button class="ic-btn" onclick="removeClip('${clip.id}')">✕</button>
+    </div>`;
+  return row;
+}
+
+function cycleStars(id){
+  const c=R.clips.find(x=>x.id===id); if(!c) return;
+  c.stars=(c.stars+1)%4;
+  renderClipList(); buildExpGrid();
+}
+
+function editClipInline(id){
+  const c=R.clips.find(x=>x.id===id); if(!c) return;
+  // Build inline editor replacing the card
+  const card=document.getElementById('cc-'+id); if(!card) return;
+  const st=SHOT_MAP[c.shotKey];
+  const editor=document.createElement('div');
+  editor.style.cssText='background:var(--s2);border:1px solid rgba(201,170,78,.3);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px;animation:fu .2s ease both';
+
+  const playerPills=R.players.map(p=>
+    `<button class="pill" style="${c.player===p.name?`border-color:${p.color};color:${p.color};background:${p.color}18`:''}"
+      onclick="setCP('${id}','player','${p.name}','${p.team}',this,event)">${p.name}</button>`).join('');
+  const shotPills=SHOTS.map(s=>
+    `<button class="pill" style="${c.shotKey===s.key?`border-color:${s.color};color:${s.color};background:${s.color}18`:''}"
+      onclick="setCP('${id}','shot','${s.key}','',this,event)">${s.icon} ${s.label}</button>`).join('');
+  const rolePills=ROLES.map(r=>
+    `<button class="pill" style="${c.role===r.key?'border-color:var(--gold2);color:var(--gold2);background:rgba(201,170,78,.1)':''}"
+      onclick="setCP('${id}','role','${r.key}','',this,event)">${r.icon} ${r.label}</button>`).join('');
+  const starPills=[0,1,2,3].map(s=>
+    `<button class="pill" style="${c.stars===s?'border-color:var(--gold);color:var(--gold);background:rgba(201,170,78,.1)':''}"
+      onclick="setCP('${id}','stars','${s}','',this,event)">${s===0?'None':STAR_ICONS[s]}</button>`).join('');
+
+  const heroOn=c.heroOverride||c.shotKey==='celeb';
+  const showHero=c.shotKey==='hole'||c.shotKey==='celeb';
+
+  editor.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:.62rem;color:var(--gold2);font-family:var(--serif)">Edit Clip Tags</div>
+      <button class="btn btn-ghost btn-xs" onclick="renderClipList()">Done ✓</button>
+    </div>
+    <div><div class="fl" style="margin-bottom:5px">Player</div><div class="pills">${playerPills}</div></div>
+    <div><div class="fl" style="margin-bottom:5px">Shot Type</div><div class="pills">${shotPills}</div></div>
+    <div><div class="fl" style="margin-bottom:5px">Camera Role</div><div class="pills">${rolePills}</div></div>
+    <div><div class="fl" style="margin-bottom:5px">Star Rating</div><div class="pills">${starPills}</div></div>
+    <div id="heroRow-${id}" style="${showHero?'':'display:none'}">
+      <div class="fl" style="margin-bottom:6px">Hero Shot Treatment</div>
+      <div class="hero-toggle${heroOn?' on':''}" id="heroToggle-${id}" onclick="toggleHeroCP('${id}')">
+        <div class="ht-switch"><div class="ht-knob"></div></div>
+        <div class="ht-text">
+          <div class="ht-title">🎬 Cinematic overlay</div>
+          <div class="ht-desc">Big player name, warm vignette. Use for chip-ins, long putts, moments worth celebrating.</div>
+        </div>
+      </div>
+    </div>`;
+  card.replaceWith(editor);
+}
+
+function toggleHeroCP(id){
+  const c=R.clips.find(x=>x.id===id); if(!c) return;
+  c.heroOverride=!c.heroOverride;
+  document.getElementById('heroToggle-'+id)?.classList.toggle('on',c.heroOverride);
+}
+
+function setCP(id,field,val,extra,btn,e){
+  e.stopPropagation();
+  const c=R.clips.find(x=>x.id===id); if(!c) return;
+  if(field==='player'){c.player=val;c.team=extra;}
+  else if(field==='shot'){
+    c.shotKey=val;
+    // Show/hide hero row depending on new shot type
+    const heroRow=document.getElementById('heroRow-'+id);
+    if(heroRow){
+      const show=val==='hole'||val==='celeb';
+      heroRow.style.display=show?'':'none';
+      if(val==='celeb'){ c.heroOverride=true; document.getElementById('heroToggle-'+id)?.classList.add('on'); }
+    }
+  }
+  else if(field==='role') c.role=val;
+  else if(field==='stars') c.stars=parseInt(val);
+  // Highlight active pill
+  btn.closest('.pills').querySelectorAll('.pill').forEach(p=>{p.style.borderColor='';p.style.color='';p.style.background='';});
+  if(field==='player'){const pl=R.players.find(p=>p.name===val);if(pl){btn.style.borderColor=pl.color;btn.style.color=pl.color;btn.style.background=pl.color+'18';}}
+  else if(field==='shot'){const st=SHOT_MAP[val];btn.style.borderColor=st.color;btn.style.color=st.color;btn.style.background=st.color+'18';}
+  else{btn.style.borderColor='var(--gold2)';btn.style.color='var(--gold2)';btn.style.background='rgba(201,170,78,.1)';}
+  updatePC(); renderHoleSummary();
+}
+
+function removeClip(id){ R.clips=R.clips.filter(c=>c.id!==id); renderClipList(); refreshHoleGrid(); updatePC(); buildExpGrid(); }
+function updatePC(){ R.players.forEach((p,i)=>{ const el=document.getElementById('pcc-'+i); if(el) el.textContent=R.clips.filter(c=>c.player===p.name).length; }); }
+
+// ══════════════════════════════════════════════
+// HOLE SUMMARY
+// ══════════════════════════════════════════════
+function renderHoleSummary(){
+  const hc=R.clips.filter(c=>c.hole===R.currentHole);
+  const card=document.getElementById('holeCard'),btns=document.getElementById('holeExportBtns');
+  btns.innerHTML='';
+  if(!hc.length){ card.innerHTML=`<div class="hs-h">Hole ${R.currentHole}</div><div style="font-size:.6rem;color:var(--muted);padding:8px 0">No clips yet</div>`; return; }
+  let html=`<div class="hs-h">Hole ${R.currentHole} · <span style="color:var(--green3)">${hc.length} clips</span></div><div class="hs-players">`;
+  R.players.forEach((p,i)=>{
+    const pc=hc.filter(c=>c.player===p.name); if(!pc.length) return;
+    const pips=pc.map(c=>{const st=SHOT_MAP[c.shotKey];return `<span class="shot-pip" style="background:${st.color}20;color:${st.color};border:1px solid ${st.color}55">${st.label}</span>`;}).join('');
+    html+=`<div class="hs-pr"><div class="hsp-dot" style="background:${p.color}"></div>
+      <div class="hsp-info"><div class="hsp-name">${p.name}</div><div class="hsp-team">${p.team}</div></div>
+      <div class="hsp-shots">${pips}</div></div>`;
+    const b=document.createElement('button'); b.className='btn btn-outline btn-sm';
+    b.style.cssText=`border-color:${p.color}66;color:${p.color}`;
+    b.textContent=p.name+' only'; b.onclick=()=>openExport('player-hole',p.name);
+    btns.appendChild(b);
+  });
+  html+='</div>'; card.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+// EXPORT GRID
+// ══════════════════════════════════════════════
+function buildExpGrid(){
+  const g=document.getElementById('expGrid'); g.innerHTML='';
+  const cards=[
+    {icon:'⛳',title:`Hole ${R.currentHole} — All Players`,desc:`Broadcast-order highlight, all players on hole ${R.currentHole}.`,meta:R.clips.filter(c=>c.hole===R.currentHole).length+' clips',fn:()=>openExport('hole')},
+    ...R.players.map((p,i)=>({icon:'🏌',title:`${p.name} — Hole ${R.currentHole}`,desc:`${p.name} (${p.team||'—'}) all shots on hole ${R.currentHole}.`,meta:R.clips.filter(c=>c.player===p.name&&c.hole===R.currentHole).length+' clips',color:p.color,fn:()=>openExport('player-hole',p.name)})),
+    {icon:'🎬',title:'Round Highlight ★★★',desc:'Best-rated shots (★★★ first) across the full round. Great for end-of-day post.',meta:R.clips.length+' total clips',fn:()=>openExport('round-best')},
+    ...R.players.map((p,i)=>({icon:'🏆',title:`${p.name} — Full Reel`,desc:`Every clip of ${p.name} across all holes.`,meta:R.clips.filter(c=>c.player===p.name).length+' clips',color:p.color,fn:()=>openExport('player-round',p.name)})),
+  ];
+  cards.forEach(card=>{
+    const d=document.createElement('div'); d.className='exp-c';
+    if(card.color) d.style.borderColor=card.color+'44';
+    d.innerHTML=`<div class="exp-c-i">${card.icon}</div>
+      <div class="exp-c-t"${card.color?` style="color:${card.color}"`:''}>${card.title}</div>
+      <div class="exp-c-d">${card.desc}</div>
+      <div class="exp-c-m">${card.meta}</div>`;
+    d.onclick=card.fn; g.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════
+// LT SETTINGS PANEL
+// ══════════════════════════════════════════════
+function buildLTPanel(){
+  const panel=document.getElementById('ltPanel');
+  panel.innerHTML=`
+    <div class="lt-panel-h">Lower-Third Graphics Settings</div>
+    <div class="fg"><div class="fl">Style</div>
+      <div class="lt-presets" id="ltStyleBtns">
+        <div class="ltp ${R.lt.style==='broadcast'?'active':''}" onclick="updateLTStyle('broadcast',this)">Broadcast bar</div>
+        <div class="ltp ${R.lt.style==='minimal'?'active':''}" onclick="updateLTStyle('minimal',this)">Minimal overlay</div>
+        <div class="ltp ${R.lt.style==='none'?'active':''}" onclick="updateLTStyle('none',this)">No graphics</div>
+      </div>
+    </div>
+    <div class="fg" id="ltFieldsPanel" style="${R.lt.style==='none'?'display:none':''}">
+      <div class="fl">Fields to include</div>
+      <div class="lt-toggles" id="ltFieldsHub"></div>
+    </div>
+    <div style="font-size:.58rem;color:var(--muted);line-height:1.8;letter-spacing:.04em">
+      Changes apply to all future exports. Lower-third style can also be changed before each individual export.
+    </div>`;
+  buildLTFieldsHub();
+}
+
+function buildLTFieldsHub(){
+  const wrap=document.getElementById('ltFieldsHub'); if(!wrap) return; wrap.innerHTML='';
+  LT_FIELDS.forEach(f=>{
+    const on=R.lt.fields[f.key];
+    const d=document.createElement('div'); d.className='lt-toggle'+(on?' on':'');
+    d.onclick=()=>{ R.lt.fields[f.key]=!R.lt.fields[f.key]; d.classList.toggle('on',R.lt.fields[f.key]); d.querySelector('.ltt-check').textContent=R.lt.fields[f.key]?'✓':''; };
+    d.innerHTML=`<div class="ltt-check">${on?'✓':''}</div><div class="ltt-label">${f.label}</div>`;
+    wrap.appendChild(d);
+  });
+}
+
+function updateLTStyle(style,el){
+  R.lt.style=style;
+  document.querySelectorAll('#ltStyleBtns .ltp').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  const fp=document.getElementById('ltFieldsPanel'); if(fp) fp.style.display=style==='none'?'none':'';
+}
+
+// ══════════════════════════════════════════════
+// OUTPUT FORMAT
+// ══════════════════════════════════════════════
+// Canonical output dimensions for each format
+const FORMATS={
+  '16:9':{W:1280,H:720,  label:'16:9 Landscape'},
+  '9:16':{W:720, H:1280, label:'9:16 Portrait'},
+  '1:1': {W:1080,H:1080, label:'1:1 Square'},
+};
+let _exportFmt='16:9';
+
+function setExportFmt(fmt,el){
+  _exportFmt=fmt;
+  document.querySelectorAll('.fmt-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ══════════════════════════════════════════════
+// EXPORT BUILDER
+// ══════════════════════════════════════════════
+function buildSeq(type,player){
+  let pool=[...R.clips];
+  if(type==='hole') pool=pool.filter(c=>c.hole===R.currentHole);
+  else if(type==='player-hole') pool=pool.filter(c=>c.hole===R.currentHole&&c.player===player);
+  else if(type==='player-round') pool=pool.filter(c=>c.player===player);
+  else if(type==='round-best') pool=[...pool].sort((a,b)=>b.stars-a.stars);
+
+  // Split celebration clips out — they will be re-inserted after their player's hole out
+  const celebClips=pool.filter(c=>c.shotKey==='celeb');
+  const mainClips=pool.filter(c=>c.shotKey!=='celeb');
+
+  // Sort main clips: hole → shot order → player index → role
+  mainClips.sort((a,b)=>{
+    if(a.hole!==b.hole) return a.hole-b.hole;
+    const so=(SHOT_MAP[a.shotKey]?.order??99)-(SHOT_MAP[b.shotKey]?.order??99);
+    if(so!==0) return so;
+    const pi=R.players.findIndex(p=>p.name===a.player)-R.players.findIndex(p=>p.name===b.player);
+    if(pi!==0) return pi;
+    return (ROLE_MAP[a.role]?.order??0)-(ROLE_MAP[b.role]?.order??0);
+  });
+
+  // Re-insert each celebration clip immediately after its matching player's hole-out clip
+  // Match on same hole + same player; if player is blank, insert after last hole-out on that hole
+  const result=[];
+  for(let i=0;i<mainClips.length;i++){
+    result.push(mainClips[i]);
+    if(mainClips[i].shotKey==='hole'){
+      const holeNum=mainClips[i].hole, playerName=mainClips[i].player;
+      const matched=celebClips.filter(c=>c.hole===holeNum&&(c.player===playerName||!c.player));
+      matched.forEach(c=>{ if(!result.includes(c)) result.push(c); });
+    }
+  }
+  // Any celebration clips not yet placed (no matching hole-out tagged) go at the end
+  celebClips.forEach(c=>{ if(!result.includes(c)) result.push(c); });
+  return result;
+}
+
+function openExport(type,player){
+  const seq=buildSeq(type,player);
+  if(!seq.length){toast('No clips for this export');return;}
+  R.exportQueue={type,player,seq};
+
+  const titles={hole:`Hole ${R.currentHole} — All Players`,'player-hole':`${player} — Hole ${R.currentHole}`,'round-best':'Round Highlight ★★★','player-round':`${player} — Full Round Reel`};
+  document.getElementById('emTitle').textContent=titles[type]||'Export';
+  document.getElementById('emDesc').textContent=`${seq.length} clips · ${R.lt.style==='none'?'No graphics':'Lower-third: '+R.lt.style}`;
+
+  const sw=document.getElementById('emSeqWrap'),se=document.getElementById('emSeq');
+  sw.style.display=''; se.innerHTML='';
+  seq.forEach(c=>{
+    const st=SHOT_MAP[c.shotKey],pl=R.players.find(p=>p.name===c.player);
+    const d=document.createElement('div'); d.className='em-si';
+    d.innerHTML=`<div class="em-sid" style="background:${st.color}"></div>
+      <div class="em-sil">H${c.hole} · ${st.icon} ${st.label} · <span style="color:${pl?.color||'var(--muted)'}">${c.player||'—'}</span>${c.stars?` <span style="color:var(--gold)">${STAR_ICONS[c.stars]}</span>`:''}</div>
+      <div class="em-sib">${fmt(c.dur)}</div>`;
+    se.appendChild(d);
+  });
+
+  document.getElementById('emVid').style.display='none';
+  document.getElementById('emFormatWrap').style.display='';
+  // Reset format selector to current choice
+  document.querySelectorAll('.fmt-card').forEach(c=>c.classList.toggle('sel',c.dataset.fmt===_exportFmt));
+  document.getElementById('emRender').textContent='⬛ Render & Download';
+  document.getElementById('emRender').onclick=startRender;
+  document.getElementById('expOverlay').classList.add('on');
+}
+function closeExport(){ document.getElementById('expOverlay').classList.remove('on'); }
+
+// ══════════════════════════════════════════════
+// RENDER ENGINE
+// ══════════════════════════════════════════════
+async function startRender(){
+  const {seq,type,player}=R.exportQueue;
+  const fmt=FORMATS[_exportFmt]||FORMATS['16:9'];
+  closeExport();
+  document.getElementById('progBG').classList.add('on');
+  setProgress(0,'Setting up canvas…');
+  try{
+    const W=fmt.W, H=fmt.H;
+    const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
+    const ctx=canvas.getContext('2d');
+    const mime=getMime();
+    const stream=canvas.captureStream(30);
+    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:9000000});
+    const chunks=[]; rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    rec.start(100);
+
+    for(let i=0;i<seq.length;i++){
+      const clip=seq[i];
+      const st=SHOT_MAP[clip.shotKey];
+      setProgress(Math.round((i/seq.length)*88),`H${clip.hole} · ${st.label} · ${clip.player||''} (${i+1}/${seq.length})`);
+      await renderClip(clip,canvas,ctx,W,H);
+    }
+
+    setProgress(94,'Encoding…');
+    await new Promise(r=>{rec.onstop=r;rec.stop();});
+    setProgress(100,'Done!');
+
+    const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob);
+    document.getElementById('progBG').classList.remove('on');
+
+    const vid=document.getElementById('emVid');
+    vid.src=url; vid.style.display='block';
+    document.getElementById('emFormatWrap').style.display='none';
+    document.getElementById('emSeqWrap').style.display='none';
+    document.getElementById('emDesc').textContent=`${seq.length} clips · ${fmt.label} · rendered in browser`;
+    const rb=document.getElementById('emRender');
+    rb.textContent='↓ Download'; rb.onclick=()=>{const a=document.createElement('a');a.href=url;a.download=makeFilename(type,player);a.click();};
+    document.getElementById('expOverlay').classList.add('on');
+  }catch(err){
+    document.getElementById('progBG').classList.remove('on');
+    alert('Render failed: '+err.message+'\nUse Chrome or Edge for best results.');
+    console.error(err);
+  }
+}
+
+function renderClip(clip,canvas,ctx,W,H){
+  return new Promise((res,rej)=>{
+    const vid=document.createElement('video');
+    vid.src=clip.url; vid.muted=true; vid.playsInline=true;
+    const s=clip.trimStart||0,e=clip.trimEnd??clip.dur;
+    vid.onloadedmetadata=()=>{vid.currentTime=s;};
+    vid.onseeked=async()=>{
+      try{
+        await vid.play();
+        const st=SHOT_MAP[clip.shotKey],pl=R.players.find(p=>p.name===clip.player);
+        const draw=()=>{
+          if(vid.paused||vid.ended||vid.currentTime>=e){vid.pause();return res();}
+          const vW=vid.videoWidth||W,vH=vid.videoHeight||H;
+          const sc=Math.min(W/vW,H/vH);
+          const dW=vW*sc,dH=vH*sc,dx=(W-dW)/2,dy=(H-dH)/2;
+          ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+          ctx.drawImage(vid,dx,dy,dW,dH);
+          if(clip.shotKey==='celeb'||clip.heroOverride) drawHeroShot(ctx,clip,pl,W,H);
+          else if(R.lt.style!=='none') drawLT(ctx,clip,st,pl,W,H);
+          requestAnimationFrame(draw);
+        };
+        requestAnimationFrame(draw);
+      }catch(err){rej(err);}
+    };
+    vid.onerror=rej; vid.load();
+  });
+}
+
+function drawLT(ctx,clip,st,pl,W,H){
+  const f=R.lt.fields, minimal=R.lt.style==='minimal';
+  // Scale fonts & bar relative to output height so portrait looks right
+  const scale=Math.min(W,H)/720;
+  const fs={shot:Math.round(15*scale), player:Math.round(14*scale),
+            team:Math.round(10*scale), hole:Math.round(11*scale),
+            tournament:Math.round(9*scale), badge:Math.round(9*scale)};
+  const barH=Math.round((minimal?42:54)*scale);
+  const barW=minimal?W*0.6:W*0.65;
+  const alpha=minimal?0.5:0.65;
+  const lx=Math.round(14*scale);
+
+  // Bar background
+  ctx.fillStyle=`rgba(0,0,0,${alpha})`; ctx.fillRect(0,H-barH,barW,barH);
+  // Color accent stripe
+  ctx.fillStyle=st.color; ctx.fillRect(0,H-(barH+2),barW,2);
+
+  // Hole badge top-left
+  const badgeW=Math.round(80*scale), badgeH=Math.round(26*scale);
+  if(f.holeNum){
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(0,0,badgeW,badgeH);
+    ctx.fillStyle=st.color; ctx.fillRect(0,0,badgeW,2);
+    ctx.font=`${fs.hole}px "Azeret Mono"`; ctx.fillStyle='#e0d7c2';
+    ctx.fillText('HOLE '+clip.hole, Math.round(10*scale), Math.round(17*scale));
+  }
+
+  // Tournament top center
+  if(f.tournament && R.tournament){
+    ctx.font=`${fs.tournament}px "Azeret Mono"`; ctx.fillStyle='rgba(201,170,78,.7)';
+    ctx.textAlign='center'; ctx.fillText(R.tournament.toUpperCase(),W/2,Math.round(16*scale)); ctx.textAlign='left';
+  }
+
+  // Shot type
+  if(f.shotType){
+    ctx.font=`bold ${fs.shot}px "Azeret Mono"`; ctx.fillStyle=st.color;
+    ctx.fillText(`${st.icon} ${st.label.toUpperCase()}`,lx,H-Math.round((barH-16*scale)));
+  }
+  // Player name
+  if(f.playerName && clip.player){
+    ctx.font=`${fs.player}px "Libre Baskerville"`; ctx.fillStyle='#f3eee3';
+    ctx.fillText(clip.player,lx,H-Math.round((barH-34*scale)));
+  }
+  // Team name
+  if(f.teamName && pl?.team){
+    ctx.font=`${fs.team}px "Azeret Mono"`; ctx.fillStyle='rgba(224,215,194,.65)';
+    ctx.fillText(pl.team.toUpperCase(),lx,H-Math.round((barH-50*scale)));
+  }
+  // Role badge right side
+  if(f.role){
+    const role=ROLE_MAP[clip.role];
+    ctx.font=`${fs.badge}px "Azeret Mono"`; ctx.fillStyle='rgba(201,170,78,.65)';
+    ctx.textAlign='right'; ctx.fillText(role?.label?.toUpperCase()||'',barW-Math.round(12*scale),H-Math.round(10*scale)); ctx.textAlign='left';
+  }
+  // Stars
+  if(f.stars && clip.stars>0){
+    ctx.font=`${Math.round(11*scale)}px serif`; ctx.fillStyle='#c9aa4e';
+    ctx.textAlign='right'; ctx.fillText(STAR_ICONS[clip.stars],barW-Math.round(12*scale),H-Math.round(26*scale)); ctx.textAlign='left';
+  }
+  // Hole-out treatment
+  if(clip.shotKey==='hole'){
+    const g=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.72);
+    g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(201,170,78,.2)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.font=`bold ${Math.round(17*scale)}px "Azeret Mono"`; ctx.fillStyle='#c9aa4e';
+    ctx.textAlign='right'; ctx.fillText('★ HOLE OUT',W-Math.round(16*scale),H-Math.round(12*scale)); ctx.textAlign='left';
+  }
+}
+
+// Hero shot overlay for Celebration clips — clean, cinematic, no lower-third clutter
+function drawHeroShot(ctx,clip,pl,W,H){
+  const scale=Math.min(W,H)/720;
+
+  // Warm vignette from edges in
+  const vig=ctx.createRadialGradient(W/2,H/2,H*.18,W/2,H/2,H*.78);
+  vig.addColorStop(0,'transparent');
+  vig.addColorStop(1,'rgba(20,8,4,.55)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+
+  // Gold accent line across bottom third
+  const lineY=H-Math.round(90*scale);
+  ctx.fillStyle='rgba(201,170,78,.7)';
+  ctx.fillRect(0,lineY,W,Math.round(2*scale));
+
+  // Player name — large, serif, centered
+  if(clip.player){
+    ctx.textAlign='center';
+    ctx.font=`bold ${Math.round(38*scale)}px "Libre Baskerville"`;
+    ctx.fillStyle='rgba(0,0,0,.45)';
+    ctx.fillText(clip.player, W/2+Math.round(2*scale), lineY+Math.round(52*scale)+Math.round(2*scale));
+    ctx.fillStyle='#f3eee3';
+    ctx.fillText(clip.player, W/2, lineY+Math.round(52*scale));
+    ctx.textAlign='left';
+  }
+
+  // School / team below name — smaller mono
+  if(pl?.team){
+    ctx.textAlign='center';
+    ctx.font=`${Math.round(14*scale)}px "Azeret Mono"`;
+    ctx.fillStyle='rgba(201,170,78,.85)';
+    ctx.fillText(pl.team.toUpperCase(), W/2, lineY+Math.round(72*scale));
+    ctx.textAlign='left';
+  }
+
+  // Subtle "HOLE OUT" badge top-right corner
+  if(R.lt.style!=='none'){
+    const bW=Math.round(110*scale), bH=Math.round(28*scale);
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    ctx.fillRect(W-bW, 0, bW, bH);
+    ctx.fillStyle='#c9aa4e';
+    ctx.fillRect(W-bW, 0, bW, Math.round(2*scale));
+    ctx.font=`bold ${Math.round(10*scale)}px "Azeret Mono"`;
+    ctx.fillStyle='#c9aa4e';
+    ctx.textAlign='right';
+    ctx.fillText('★ HOLE OUT', W-Math.round(10*scale), Math.round(18*scale));
+    ctx.textAlign='left';
+
+    // Tournament top-center
+    if(R.tournament){
+      ctx.font=`${Math.round(9*scale)}px "Azeret Mono"`;
+      ctx.fillStyle='rgba(201,170,78,.6)';
+      ctx.textAlign='center';
+      ctx.fillText(R.tournament.toUpperCase(), W/2, Math.round(16*scale));
+      ctx.textAlign='left';
+    }
+  }
+}
+
+function makeFilename(type,player){
+  const t=R.tournament.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'');
+  const d=new Date().toISOString().slice(0,10);
+  const fmtSuffix=_exportFmt.replace(':','x'); // e.g. 16x9, 9x16, 1x1
+  const m={hole:`${t}-H${R.currentHole}-AllPlayers`,'player-hole':`${t}-H${R.currentHole}-${(player||'').replace(/\s/g,'-')}`,'round-best':`${t}-RoundHighlight`,'player-round':`${t}-${(player||'').replace(/\s/g,'-')}-Reel`};
+  return (m[type]||'highlight')+'-'+fmtSuffix+'-'+d+'.webm';
+}
+
+// ══════════════════════════════════════════════
+// PHONE UPLOADER
+// ══════════════════════════════════════════════
+function initPhone(){
+  const drop=document.getElementById('phDrop'),inp=document.getElementById('phFile');
+  drop.onclick=()=>inp.click();
+  inp.onchange=e=>addPhFiles(e.target.files);
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag-over')};
+  drop.ondragleave=()=>drop.classList.remove('drag-over');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag-over');addPhFiles(e.dataTransfer.files)};
+  buildPhHoleTaps();
+  buildPhShotTaps();
+  buildPhPlayerTaps();
+  buildPhStarTaps();
+}
+
+function addPhFiles(files){
+  phFiles.push(...Array.from(files).filter(f=>f.type.startsWith('video/')));
+  const list=document.getElementById('phClips');
+  list.style.display=phFiles.length?'':'none';
+  list.innerHTML=phFiles.map(f=>`<div class="ph-clip-row">
+    <span style="font-size:.9rem">🎬</span>
+    <div class="ph-clip-name">${f.name.replace(/\.[^.]+$/,'')}</div>
+    <span style="font-size:.7rem;color:var(--green3)">✓</span>
+  </div>`).join('');
+  document.getElementById('phTagUI').style.display=phFiles.length?'flex':'none';
+  document.getElementById('phSubmitBtn').disabled=!phFiles.length;
+}
+
+function setPhRole(key,el){
+  phRole=key;
+  document.querySelectorAll('#phRoleTaps .role-tap').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function buildPhHoleTaps(){
+  const wrap=document.getElementById('phHoleTaps'); wrap.innerHTML='';
+  for(let h=1;h<=18;h++){
+    const d=document.createElement('div'); d.className='hole-tap'+(h===phHole?' sel':''); d.textContent=h;
+    d.onclick=()=>{ phHole=h; document.querySelectorAll('#phHoleTaps .hole-tap').forEach(e=>e.classList.remove('sel')); d.classList.add('sel'); };
+    wrap.appendChild(d);
+  }
+}
+
+function buildPhShotTaps(){
+  const wrap=document.getElementById('phShotTaps'); wrap.innerHTML='';
+  const selectShot=key=>{
+    phShot=key;
+    wrap.querySelectorAll('.shot-tap').forEach(e=>e.classList.remove('sel'));
+    wrap.querySelector(`[data-key="${key}"]`)?.classList.add('sel');
+    // Show hero toggle for hole-out and celebration; auto-on for celebration
+    const heroSection=document.getElementById('phHeroSection');
+    const heroToggle=document.getElementById('phHeroToggle');
+    if(key==='hole'||key==='celeb'){
+      heroSection.style.display='';
+      if(key==='celeb'){ phHeroOverride=true; heroToggle.classList.add('on'); }
+      // If switching back to hole-out, leave toggle in whatever state it was
+    } else {
+      heroSection.style.display='none';
+      phHeroOverride=false; heroToggle.classList.remove('on');
+    }
+  };
+
+  SHOTS.forEach(st=>{
+    const d=document.createElement('div');
+    d.dataset.key=st.key;
+    const isSel=phShot===st.key;
+
+    if(st.key==='hole'){
+      d.className='shot-tap hole-out-tap'+(isSel?' sel':'');
+      d.innerHTML=`<div class="hot-icon">${st.icon}</div><div class="hot-label">★ ${st.label}</div>`;
+    } else if(st.key==='celeb'){
+      d.className='shot-tap celeb-tap'+(isSel?' sel':'');
+      d.innerHTML=`<div class="hot-icon">${st.icon}</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="celeb-label">Celebration / Hero Shot</div>
+          <div style="font-size:.52rem;color:var(--muted);letter-spacing:.05em">Film after hole out — player reaction &amp; celebration</div>
+        </div>`;
+    } else {
+      d.className='shot-tap'+(isSel?' sel':'');
+      d.innerHTML=`<div class="st-icon">${st.icon}</div><div class="st-label">${st.label}</div>`;
+    }
+    d.onclick=()=>selectShot(st.key);
+    wrap.appendChild(d);
+  });
+}
+
+function buildPhPlayerTaps(){
+  const wrap=document.getElementById('phPlayerTaps');
+  // Keep the "All/Mixed" option at top, then add players from session
+  // In phone mode R.players may be empty (different device), show generic options
+  const players=R.players.length?R.players:[{name:'Player 1',team:'',color:P_COLORS[0]},{name:'Player 2',team:'',color:P_COLORS[1]},{name:'Player 3',team:'',color:P_COLORS[2]}];
+  // Only add if not already built
+  if(wrap.children.length<=1){
+    players.forEach((p,i)=>{
+      const d=document.createElement('div');
+      d.className='player-tap'+(phPlayer===p.name?' sel':'');
+      d.innerHTML=`<div class="pt-dot" style="background:${p.color}"></div>
+        <div class="pt-info"><div class="pt-name">${p.name}</div><div class="pt-team">${p.team||''}</div></div>
+        <div class="pt-check">✓</div>`;
+      d.onclick=()=>setPhPlayer(p.name,d);
+      wrap.appendChild(d);
+    });
+  }
+}
+
+function setPhPlayer(name,el){
+  phPlayer=name;
+  document.querySelectorAll('#phPlayerTaps .player-tap').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function buildPhStarTaps(){} // Built inline in HTML
+
+function togglePhHero(){
+  phHeroOverride=!phHeroOverride;
+  document.getElementById('phHeroToggle').classList.toggle('on',phHeroOverride);
+}
+
+function setPhStars(n,el){
+  phStars=n;
+  document.querySelectorAll('#phStarTaps .star-tap').forEach(e=>{e.className='star-tap';});
+  el.classList.add('sel-'+n);
+}
+
+async function phSubmit(){
+  const btn=document.getElementById('phSubmitBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+  for(const f of phFiles){
+    const url=URL.createObjectURL(f),dur=await vidDur(url);
+    const pl=R.players.find(p=>p.name===phPlayer)||{name:phPlayer,team:'',color:P_COLORS[0]};
+    R.clips.push({id:uid(),name:f.name.replace(/\.[^.]+$/,''),file:f,url,
+      dur,hole:phHole,player:pl.name,team:pl.team,
+      shotKey:phShot,role:phRole,stars:phStars,heroOverride:phHeroOverride,trimStart:0,trimEnd:dur});
+  }
+  document.getElementById('phCard').style.display='none';
+  document.getElementById('phDoneCard').style.display='';
+}
+
+function phReset(){
+  phFiles=[]; phHeroOverride=false;
+  document.getElementById('phHeroToggle')?.classList.remove('on');
+  document.getElementById('phHeroSection').style.display='none';
+  document.getElementById('phCard').style.display='';
+  document.getElementById('phDoneCard').style.display='none';
+  document.getElementById('phClips').style.display='none';
+  document.getElementById('phClips').innerHTML='';
+  document.getElementById('phTagUI').style.display='none';
+  const btn=document.getElementById('phSubmitBtn'); btn.disabled=true; btn.textContent='Send to Session →';
+}
+
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// QR / UTILS
+// ══════════════════════════════════════════════
+// Real QR codes via qrcode.js — styled to match the app's dark/gold palette
+const _qrInstances={};
+function drawQR(code,url,containerId,size){
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  // Clear any previous QR rendered into this container
+  el.innerHTML='';
+  if(_qrInstances[containerId]){ try{ _qrInstances[containerId].clear(); }catch(e){} }
+  _qrInstances[containerId]=new QRCode(el,{
+    text:url,
+    width:size,
+    height:size,
+    colorDark:'#c9aa4e',   // gold modules
+    colorLight:'#0b1c10',  // dark background
+    correctLevel:QRCode.CorrectLevel.M,
+  });
+  // Make the generated image/canvas fit the container cleanly
+  el.style.width=size+'px';
+  el.style.height=size+'px';
+  const img=el.querySelector('img,canvas');
+  if(img){ img.style.display='block'; img.style.width=size+'px'; img.style.height=size+'px'; }
+}
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function fmt(s){ if(!s||isNaN(s)) return '0s'; return s<60?s.toFixed(1)+'s':Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
+function vidDur(url){ return new Promise(r=>{ const v=document.createElement('video'); v.src=url; v.onloadedmetadata=()=>r(v.duration); v.onerror=()=>r(0); }); }
+function loadV(url){ return new Promise((r,j)=>{ const v=document.createElement('video'); v.src=url; v.muted=true; v.playsInline=true; v.onloadedmetadata=()=>r(v); v.onerror=j; }); }
+function getMime(){ for(const t of['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4']) if(MediaRecorder.isTypeSupported(t)) return t; return ''; }
+function setProgress(pct,label){ document.getElementById('pbFill').style.width=pct+'%'; document.getElementById('pbPct').textContent=pct+'%'; document.getElementById('pbSub').textContent=label; }
+function randCode(){ return Math.random().toString(36).slice(2,8).toUpperCase(); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2700); }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</body>
+</html>
