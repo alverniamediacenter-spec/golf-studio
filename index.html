@@ -833,6 +833,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
       <button class="btn btn-gold" style="width:100%;padding:14px;font-size:.68rem" id="phSubmitBtn" disabled onclick="phSubmit()">
         Send to Session →
       </button>
+      <!-- Host only: link to open the full desktop editor -->
+      <button id="switchToEditorBtn" style="display:none;width:100%" class="btn btn-ghost btn-sm" onclick="show('v-hub')">
+        Open full editor (desktop) →
+      </button>
     </div>
     <div class="ph-card" id="phDoneCard" style="display:none">
       <div class="ph-done">
@@ -1106,7 +1110,18 @@ function copyShareLink(){
 }
 
 function enterHub(){
-  show('v-hub');
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 600;
+  if(isMobile){
+    // Host on a phone goes to the filmer upload view — same as co-filmer
+    // Session data (R.players, R.code) is already set so player taps will show real names
+    document.getElementById('phCode').textContent = R.code;
+    show('v-phone');
+    initPhone();
+    // Show a small link to open the full editor (in case they're on a tablet)
+    document.getElementById('switchToEditorBtn').style.display = '';
+  } else {
+    show('v-hub');
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1808,21 +1823,33 @@ function buildPhShotTaps(){
 
 function buildPhPlayerTaps(){
   const wrap=document.getElementById('phPlayerTaps');
-  // Keep the "All/Mixed" option at top, then add players from session
-  // In phone mode R.players may be empty (different device), show generic options
-  const players=R.players.length?R.players:[{name:'Player 1',team:'',color:P_COLORS[0]},{name:'Player 2',team:'',color:P_COLORS[1]},{name:'Player 3',team:'',color:P_COLORS[2]}];
-  // Only add if not already built
-  if(wrap.children.length<=1){
-    players.forEach((p,i)=>{
-      const d=document.createElement('div');
-      d.className='player-tap'+(phPlayer===p.name?' sel':'');
-      d.innerHTML=`<div class="pt-dot" style="background:${p.color}"></div>
-        <div class="pt-info"><div class="pt-name">${p.name}</div><div class="pt-team">${p.team||''}</div></div>
-        <div class="pt-check">✓</div>`;
-      d.onclick=()=>setPhPlayer(p.name,d);
-      wrap.appendChild(d);
-    });
-  }
+  // Always rebuild so real player names show whether host or co-filmer
+  wrap.innerHTML='';
+  // "All / Mixed" option first
+  const allDiv=document.createElement('div');
+  allDiv.className='player-tap'+(phPlayer===''?' sel':'');
+  allDiv.innerHTML=`<div class="pt-dot" style="background:var(--muted)"></div>
+    <div class="pt-info"><div class="pt-name">All / Mixed</div><div class="pt-team">Multiple players in clip</div></div>
+    <div class="pt-check">✓</div>`;
+  allDiv.onclick=()=>setPhPlayer('',allDiv);
+  wrap.appendChild(allDiv);
+
+  // Real players if available, otherwise generic placeholders
+  const players=R.players.length
+    ? R.players
+    : [{name:'Player 1',team:'',color:P_COLORS[0]},
+       {name:'Player 2',team:'',color:P_COLORS[1]},
+       {name:'Player 3',team:'',color:P_COLORS[2]}];
+
+  players.forEach(p=>{
+    const d=document.createElement('div');
+    d.className='player-tap'+(phPlayer===p.name?' sel':'');
+    d.innerHTML=`<div class="pt-dot" style="background:${p.color}"></div>
+      <div class="pt-info"><div class="pt-name">${p.name}</div><div class="pt-team">${p.team||''}</div></div>
+      <div class="pt-check">✓</div>`;
+    d.onclick=()=>setPhPlayer(p.name,d);
+    wrap.appendChild(d);
+  });
 }
 
 function setPhPlayer(name,el){
@@ -1868,6 +1895,7 @@ function phReset(){
   document.getElementById('phClips').innerHTML='';
   document.getElementById('phTagUI').style.display='none';
   const btn=document.getElementById('phSubmitBtn'); btn.disabled=true; btn.textContent='Send to Session →';
+  // Don't hide switchToEditorBtn — if host reset to add more clips they still need it
 }
 
 // ══════════════════════════════════════════════
