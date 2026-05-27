@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      ".gitignore",
+      "SETUP.md",
+      "firestore.rules",
+      "storage.rules",
+      ".firebase"
+    ]
+  }
+}

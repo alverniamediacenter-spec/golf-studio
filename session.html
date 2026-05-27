@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Golf Broadcast Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05100a;--s1:#0b1c10;--s2:#112016;--s3:#18281c;--s4:#1e3022;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.11);--bdr3:rgba(255,255,255,.18);
+  --gold:#c9aa4e;--gold2:#e8cb72;--gold3:#f6e09e;
+  --green:#2d6b38;--green2:#3d8e4a;--green3:#50ae5c;
+  --cream:#e0d7c2;--muted:#66786a;--dim:#3e4e40;--white:#f3efe4;--red:#a02818;
+  --tee:#5a9fd5;--fair:#46a858;--app:#d08a1e;--chip:#a450b0;--putt:#34a8b6;--hole:#c9aa4e;--celeb:#e8765a;
+  --serif:'Libre Baskerville',serif;--mono:'Azeret Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.3;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E")}
+.view{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.view.on{display:flex}
+.hdr{display:flex;align-items:center;gap:10px;padding:11px 20px;
+  background:rgba(5,16,10,.97);border-bottom:1px solid var(--bdr);
+  backdrop-filter:blur(14px);flex-shrink:0;z-index:60}
+.logo{font-family:var(--serif);font-size:1.3rem;font-weight:700;color:var(--gold);letter-spacing:.02em}
+.logo-sub{font-size:.52rem;font-family:var(--mono);color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-left:7px}
+.badge{background:var(--s2);border:1px solid var(--bdr2);padding:3px 10px;border-radius:20px;font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.badge b{color:var(--gold2);font-weight:600}
+.hdr-gap{flex:1}
+.hdr-btns{display:flex;gap:6px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:3px;border:none;cursor:pointer;font-family:var(--mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;font-weight:600;transition:all .18s;white-space:nowrap}
+.btn-gold{background:var(--gold);color:#05100a}.btn-gold:hover:not(:disabled){background:var(--gold2);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--bdr2);color:var(--cream)}.btn-outline:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover:not(:disabled){background:var(--green2)}
+.btn-ghost{background:transparent;border:1px solid var(--bdr);color:var(--muted);padding:6px 12px}.btn-ghost:hover{border-color:var(--muted);color:var(--cream)}
+.btn-sm{padding:5px 11px;font-size:.54rem}.btn-xs{padding:3px 8px;font-size:.5rem}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+
+/* ── LOADING SCREEN ── */
+#v-loading{align-items:center;justify-content:center;background:var(--bg)}
+.loading-inner{text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center}
+.spinner{width:32px;height:32px;border:2px solid var(--bdr2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:.62rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
+
+/* ── HUB ── */
+#v-hub{flex-direction:row;overflow:hidden}
+.hub-sidebar{width:252px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.hub-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.sb-sec{padding:13px 15px;border-bottom:1px solid var(--bdr);flex-shrink:0}
+.sb-lbl{font-size:.5rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.code-big{font-family:var(--serif);font-size:1.85rem;font-weight:700;color:var(--gold);letter-spacing:.22em;text-align:center;margin-bottom:7px}
+.link-row{display:flex;gap:5px}
+.link-in{flex:1;background:var(--bg);border:1px solid var(--bdr);color:var(--muted);padding:5px 7px;border-radius:2px;font-size:.52rem;font-family:var(--mono);outline:none}
+.copy-btn{padding:5px 9px;background:var(--gold);color:#05100a;border:none;border-radius:2px;cursor:pointer;font-size:.55rem;font-family:var(--mono);font-weight:600;transition:background .18s}
+.copy-btn:hover,.copy-btn.ok{background:var(--gold2)}
+.upload-status{margin-top:8px;font-size:.54rem;color:var(--muted);letter-spacing:.06em;text-align:center;min-height:14px}
+.upload-status.active{color:var(--green3)}
+.pc-list{display:flex;flex-direction:column;gap:5px}
+.pc{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:3px;border:1px solid transparent}
+.pc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pc-info{flex:1;min-width:0}
+.pc-name{font-size:.66rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-team{font-size:.52rem;color:var(--muted);letter-spacing:.04em}
+.pc-cnt{font-size:.52rem;color:var(--muted)}
+.sb-scroll{flex:1;overflow-y:auto;padding:13px 15px;display:flex;flex-direction:column;gap:12px}
+.hole-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.hb{background:var(--s2);border:1px solid var(--bdr);border-radius:2px;padding:5px 0;text-align:center;cursor:pointer;transition:all .15s;font-size:.58rem;color:var(--muted);font-family:var(--mono)}
+.hb:hover{border-color:var(--bdr2);color:var(--cream)}
+.hb.has{color:var(--green3);border-color:rgba(61,142,74,.3)}
+.hb.cur{background:var(--gold);color:#05100a;border-color:var(--gold);font-weight:700}
+.hub-tabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;background:var(--s1)}
+.htab{padding:10px 16px;font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;background:transparent;border-top:none;border-left:none;border-right:none;font-family:var(--mono)}
+.htab:hover{color:var(--cream)}.htab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-pane{display:none;flex:1;overflow:auto;padding:16px 18px;flex-direction:column;gap:12px}
+.tab-pane.on{display:flex}
+.drop-zone{border:1px dashed rgba(201,170,78,.28);border-radius:5px;padding:22px;text-align:center;cursor:pointer;transition:all .22s;background:rgba(255,255,255,.01);flex-shrink:0}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);background:rgba(201,170,78,.04)}
+.drop-zone input{display:none}
+.dz-i{font-size:1.7rem;margin-bottom:6px;opacity:.55}
+.dz-h{font-family:var(--serif);font-size:1.05rem;color:var(--gold2);margin-bottom:3px}
+.dz-p{font-size:.56rem;color:var(--muted);letter-spacing:.06em}
+.sec-h{font-size:.52rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sec-h::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.clip-card{display:grid;grid-template-columns:86px 1fr auto;background:var(--s1);border:1px solid var(--bdr);border-radius:3px;overflow:hidden;transition:border-color .18s;animation:fu .22s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.cc-thumb{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
+.cc-thumb video,.cc-thumb img{width:100%;height:100%;object-fit:cover}
+.cc-dur{position:absolute;bottom:2px;right:3px;background:rgba(0,0,0,.65);color:var(--gold2);font-size:.46rem;padding:1px 4px;border-radius:1px}
+.cc-star{position:absolute;top:3px;left:3px;font-size:.7rem;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.cc-uploading{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.cc-up-bar{width:70%;height:3px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
+.cc-up-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .3s}
+.cc-up-pct{font-size:.46rem;color:var(--gold2)}
+.cc-body{padding:8px 12px;display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:0}
+.cc-name{font-size:.62rem;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.cc-tag{padding:2px 7px;border-radius:20px;font-size:.5rem;letter-spacing:.05em;border:1px solid;cursor:pointer}
+.cc-hole-tag{background:rgba(201,170,78,.1);border-color:rgba(201,170,78,.3);color:var(--gold2)}
+.cc-actions{display:flex;align-items:center;padding:0 10px;flex-direction:column;gap:5px}
+.ic-btn{width:22px;height:22px;background:transparent;border:1px solid var(--bdr);border-radius:2px;color:var(--muted);cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.ic-btn:hover{border-color:var(--red);color:var(--red)}.ic-btn.edit:hover{border-color:var(--gold);color:var(--gold)}
+.pills{display:flex;gap:3px;flex-wrap:wrap}
+.pill{padding:2px 7px;border-radius:20px;border:1px solid var(--bdr2);background:transparent;color:var(--muted);font-family:var(--mono);font-size:.52rem;letter-spacing:.05em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.pill:hover{border-color:rgba(255,255,255,.2);color:var(--cream)}
+.fl{font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.hs-card{background:var(--s1);border:1px solid var(--bdr);border-radius:4px;padding:14px;flex-shrink:0}
+.hs-h{font-family:var(--serif);font-size:.98rem;font-weight:700;color:var(--gold2);margin-bottom:10px}
+.hs-pr{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:3px;margin-bottom:5px}
+.hsp-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.hsp-info{flex:1;min-width:0}
+.hsp-name{font-size:.64rem;color:var(--cream)}
+.hsp-team{font-size:.5rem;color:var(--muted);letter-spacing:.04em}
+.hsp-shots{display:flex;gap:3px;flex-wrap:wrap}
+.shot-pip{padding:1px 6px;border-radius:10px;font-size:.48rem;letter-spacing:.05em;text-transform:uppercase}
+.exp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
+.exp-c{background:var(--s1);border:1px solid var(--bdr);border-radius:4px;padding:14px;display:flex;flex-direction:column;gap:9px;transition:all .2s;cursor:pointer}
+.exp-c:hover{border-color:rgba(201,170,78,.35);transform:translateY(-2px)}
+.exp-c-i{font-size:1.4rem}.exp-c-t{font-family:var(--serif);font-size:.95rem;font-weight:700;color:var(--gold2)}
+.exp-c-d{font-size:.56rem;color:var(--muted);line-height:1.7}.exp-c-m{font-size:.52rem;color:var(--green3);letter-spacing:.06em}
+.lt-panel{background:var(--s1);border:1px solid var(--bdr);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.lt-panel-h{font-family:var(--serif);font-size:1rem;font-weight:700;color:var(--gold2)}
+.lt-presets-hub{display:flex;gap:8px;flex-wrap:wrap}
+.ltp{padding:8px 14px;background:var(--s2);border:1px solid var(--bdr2);border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;color:var(--muted);transition:all .2s;text-transform:uppercase}
+.ltp.active{border-color:var(--gold);color:var(--gold);background:rgba(201,170,78,.08)}
+.lt-toggles-hub{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.lt-toggle{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--bdr);border-radius:3px;cursor:pointer;transition:all .15s;user-select:none}
+.lt-toggle:hover{border-color:var(--bdr2)}.lt-toggle.on{border-color:rgba(201,170,78,.35);background:rgba(201,170,78,.06)}
+.ltt-check{width:14px;height:14px;border-radius:2px;border:1px solid var(--bdr2);background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;transition:all .15s}
+.lt-toggle.on .ltt-check{background:var(--gold);border-color:var(--gold);color:#05100a}
+.ltt-label{font-size:.58rem;color:var(--muted);letter-spacing:.06em}.lt-toggle.on .ltt-label{color:var(--cream)}
+
+/* ── EXPORT MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.overlay.on{display:flex}
+.exp-modal{background:var(--s1);border:1px solid rgba(201,170,78,.2);border-radius:6px;width:100%;max-width:820px;display:flex;flex-direction:column;margin:auto;flex-shrink:0}
+.em-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bdr)}
+.em-t{font-family:var(--serif);font-size:1.05rem;color:var(--gold2)}
+.em-x{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;transition:color .15s}.em-x:hover{color:var(--cream)}
+.em-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.em-vid{width:100%;border-radius:3px;background:#000;display:block;max-height:380px}
+.em-seq{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto}
+.em-si{display:flex;align-items:center;gap:7px;padding:5px 9px;background:var(--s2);border-radius:2px;font-size:.58rem}
+.em-sid{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.em-sil{flex:1;color:var(--cream)}.em-sib{color:var(--muted);font-size:.52rem}
+.em-foot{display:flex;gap:7px;justify-content:flex-end;padding:11px 16px;border-top:1px solid var(--bdr)}
+.fmt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fmt-card{background:var(--s2);border:2px solid var(--bdr);border-radius:5px;padding:12px 8px;cursor:pointer;text-align:center;transition:all .18s;user-select:none;display:flex;flex-direction:column;align-items:center;gap:7px}
+.fmt-card:hover{border-color:var(--bdr2)}.fmt-card.sel{border-color:var(--gold);background:rgba(201,170,78,.08)}
+.fmt-preview{display:flex;align-items:center;justify-content:center}
+.fmt-rect{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:2px;position:relative}
+.fmt-rect-inner{position:absolute;inset:2px;background:rgba(201,170,78,.15);border-radius:1px}
+.fmt-16-9{width:46px;height:26px}.fmt-9-16{width:26px;height:46px}.fmt-1-1{width:36px;height:36px}
+.fmt-label{font-size:.56rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;line-height:1.4}
+.fmt-card.sel .fmt-label{color:var(--cream)}
+.fmt-sub{font-size:.5rem;color:var(--dim);letter-spacing:.06em}.fmt-card.sel .fmt-sub{color:var(--muted)}
+
+/* ── PROGRESS ── */
+.prog-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:400;align-items:center;justify-content:center}
+.prog-bg.on{display:flex}
+.prog-box{background:var(--s1);border:1px solid rgba(201,170,78,.2);border-radius:5px;padding:26px 34px;max-width:380px;width:90%;text-align:center}
+.pb-t{font-family:var(--serif);font-size:1.15rem;color:var(--gold2);margin-bottom:3px}
+.pb-s{font-size:.58rem;color:var(--muted);letter-spacing:.08em;margin-bottom:17px;min-height:14px}
+.pb-bg{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-bottom:7px;overflow:hidden}
+.pb-f{height:100%;background:var(--gold);border-radius:2px;transition:width .33s;width:0}
+.pb-p{font-size:.55rem;color:var(--muted);letter-spacing:.1em}
+
+/* ── PHONE UPLOADER ── */
+#v-phone{overflow:auto;background:radial-gradient(ellipse at 30% 20%,rgba(45,107,56,.12),transparent 55%),var(--bg)}
+.ph-wrap{display:flex;flex-direction:column;align-items:center;padding:16px;gap:0;min-height:100%}
+.ph-card{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;padding:20px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px}
+.ph-logo{font-family:var(--serif);font-size:1.3rem;font-weight:700;color:var(--gold);margin-bottom:2px}
+.ph-sub{font-size:.52rem;color:var(--muted);letter-spacing:.18em;text-transform:uppercase}
+.ph-session-box{background:var(--bg);border:1px solid rgba(201,170,78,.18);border-radius:3px;padding:10px;text-align:center}
+.ph-tournament{font-size:.65rem;color:var(--cream);margin-bottom:3px;font-family:var(--serif)}
+.ph-code{font-family:var(--serif);font-size:1.75rem;font-weight:700;color:var(--gold);letter-spacing:.22em}
+.upload-status-ph{font-size:.58rem;text-align:center;padding:8px;border-radius:3px;letter-spacing:.06em}
+.upload-status-ph.idle{color:var(--muted)}
+.upload-status-ph.uploading{color:var(--gold);background:rgba(201,170,78,.08);border:1px solid rgba(201,170,78,.2)}
+.upload-status-ph.done{color:var(--green3);background:rgba(50,174,92,.08);border:1px solid rgba(50,174,92,.2)}
+.upload-status-ph.error{color:#e08070;background:rgba(160,40,24,.08);border:1px solid rgba(160,40,24,.2)}
+.up-progress{display:flex;flex-direction:column;gap:5px}
+.up-file-name{font-size:.58rem;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.up-bar-bg{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.up-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .2s;width:0}
+.up-pct{font-size:.52rem;color:var(--muted);text-align:right}
+.ph-drop{border:2px dashed rgba(201,170,78,.3);border-radius:6px;padding:24px 16px;cursor:pointer;transition:all .22s;text-align:center;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ph-drop:hover,.ph-drop.drag-over{border-color:var(--gold);background:rgba(201,170,78,.04)}
+.ph-drop input{display:none}
+.ph-drop-i{font-size:2.2rem;margin-bottom:7px}
+.ph-drop-h{font-family:var(--serif);font-size:1.05rem;color:var(--gold2);margin-bottom:4px}
+.ph-drop-p{font-size:.57rem;color:var(--muted);line-height:1.7}
+.ph-clips{display:flex;flex-direction:column;gap:5px}
+.ph-clip-row{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--bdr);border-radius:3px;padding:7px 10px}
+.ph-clip-name{flex:1;font-size:.6rem;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tap-section{display:flex;flex-direction:column;gap:7px}
+.tap-lbl{font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.player-taps{display:flex;flex-direction:column;gap:6px}
+.player-tap{display:flex;align-items:center;gap:10px;padding:13px 14px;background:var(--s2);border:2px solid var(--bdr);border-radius:5px;cursor:pointer;transition:all .15s;user-select:none}
+.player-tap:active{transform:scale(.97)}.player-tap.sel{border-color:var(--gold);background:rgba(201,170,78,.1)}
+.pt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pt-info{flex:1}.pt-name{font-size:.82rem;color:var(--cream);font-weight:500}
+.pt-team{font-size:.56rem;color:var(--muted);letter-spacing:.04em;margin-top:1px}
+.pt-check{font-size:.9rem;opacity:0;transition:opacity .15s}.player-tap.sel .pt-check{opacity:1}
+.shot-taps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.shot-tap{padding:12px 8px;background:var(--s2);border:2px solid var(--bdr);border-radius:5px;cursor:pointer;transition:all .15s;text-align:center;user-select:none}
+.shot-tap:active{transform:scale(.95)}.shot-tap.sel{border-color:var(--gold);background:rgba(201,170,78,.1)}
+.st-icon{font-size:1.2rem;margin-bottom:4px}.st-label{font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.shot-tap.sel .st-label{color:var(--cream)}
+.shot-tap.hole-out-tap{grid-column:1/-1;border-color:rgba(201,170,78,.3);background:rgba(201,170,78,.06);display:flex;align-items:center;justify-content:center;gap:10px;padding:14px}
+.shot-tap.hole-out-tap.sel{border-color:var(--gold);background:rgba(201,170,78,.18)}
+.hot-icon{font-size:1.5rem}.hot-label{font-size:.7rem;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.shot-tap.celeb-tap{grid-column:1/-1;border-color:rgba(232,118,90,.3);background:rgba(232,118,90,.06);display:flex;align-items:center;justify-content:center;gap:10px;padding:14px}
+.shot-tap.celeb-tap.sel{border-color:#e8765a;background:rgba(232,118,90,.16)}
+.celeb-label{font-size:.7rem;color:#e8765a;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.hole-taps{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.hole-tap{padding:10px 4px;background:var(--s2);border:2px solid var(--bdr);border-radius:4px;text-align:center;cursor:pointer;font-size:.72rem;color:var(--muted);transition:all .15s;user-select:none;font-family:var(--mono)}
+.hole-tap:active{transform:scale(.92)}.hole-tap.sel{background:var(--gold);border-color:var(--gold);color:#05100a;font-weight:700}
+.role-taps{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.role-tap{padding:13px 10px;background:var(--s2);border:2px solid var(--bdr);border-radius:5px;text-align:center;cursor:pointer;transition:all .15s;user-select:none}
+.role-tap:active{transform:scale(.95)}.role-tap.sel{border-color:var(--gold2);background:rgba(201,170,78,.08)}
+.rt-icon{font-size:1.2rem;margin-bottom:4px}.rt-label{font-size:.6rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.role-tap.sel .rt-label{color:var(--cream)}
+.star-taps{display:flex;gap:8px}
+.star-tap{flex:1;padding:12px 6px;background:var(--s2);border:2px solid var(--bdr);border-radius:5px;text-align:center;cursor:pointer;transition:all .15s;user-select:none}
+.star-tap:active{transform:scale(.95)}
+.star-tap.sel-1{border-color:var(--tee);background:rgba(90,159,213,.1)}
+.star-tap.sel-2{border-color:var(--app);background:rgba(208,138,30,.1)}
+.star-tap.sel-3{border-color:var(--gold);background:rgba(201,170,78,.12)}
+.star-tap-i{font-size:1.1rem;margin-bottom:3px}.star-tap-l{font-size:.5rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.hero-toggle{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(232,118,90,.07);border:2px solid rgba(232,118,90,.25);border-radius:5px;cursor:pointer;transition:all .18s;user-select:none}
+.hero-toggle.on{border-color:#e8765a;background:rgba(232,118,90,.14)}
+.ht-switch{width:38px;height:22px;border-radius:11px;border:2px solid rgba(255,255,255,.15);background:var(--s3);flex-shrink:0;position:relative;transition:all .2s}
+.hero-toggle.on .ht-switch{background:#e8765a;border-color:#e8765a}
+.ht-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;opacity:.5}
+.hero-toggle.on .ht-knob{transform:translateX(16px);opacity:1}
+.ht-text{flex:1}.ht-title{font-size:.7rem;color:var(--cream);font-weight:500;margin-bottom:2px}
+.ht-desc{font-size:.55rem;color:var(--muted);line-height:1.55}
+.apply-note{font-size:.56rem;color:var(--muted);line-height:1.7;background:var(--s2);border-radius:3px;padding:8px 10px}
+.ph-done{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;padding:14px}
+.ph-done-i{font-size:2.8rem}.ph-done-h{font-family:var(--serif);font-size:1.15rem;color:var(--gold2)}
+.ph-done-p{font-size:.6rem;color:var(--muted);line-height:1.8}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(46px);background:var(--s2);border:1px solid rgba(201,170,78,.2);color:var(--cream);padding:8px 15px;border-radius:20px;font-size:.58rem;letter-spacing:.06em;z-index:9998;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.toast.on{transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="view on" id="v-loading">
+  <div class="loading-inner">
+    <div style="font-family:var(--serif);font-size:1.3rem;color:var(--gold)">⛳ Golf Studio</div>
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Loading session…</div>
+  </div>
+</div>
+
+<!-- HUB (HOST EDITOR) -->
+<div class="view" id="v-hub">
+  <div class="hdr">
+    <div class="logo">Golf Studio<span class="logo-sub" id="hTournament">—</span></div>
+    <div class="badge">Session <b id="hCode">—</b></div>
+    <div class="badge">Hole <b id="hHole">1</b></div>
+    <div class="hdr-gap"></div>
+    <div class="hdr-btns">
+      <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button class="btn btn-ghost btn-sm" onclick="switchTab('settings')">⚙ Graphics</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchTab('exports')">📤 Exports</button>
+      <button class="btn btn-gold btn-sm" onclick="openExport('hole')">Export Hole →</button>
+    </div>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+    <div class="hub-sidebar">
+      <div class="sb-sec">
+        <div class="sb-lbl">Session</div>
+        <div class="code-big" id="sbCode">——</div>
+        <div class="link-row">
+          <input class="link-in" id="sbLink" readonly>
+          <button class="copy-btn" id="sbCopy" onclick="copyLink()">Copy</button>
+        </div>
+        <div id="sbQR" style="display:block;margin:9px auto 3px;line-height:0;width:108px"></div>
+        <div style="text-align:center;font-size:.48rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Scan to join on phone</div>
+        <div class="upload-status" id="uploadStatus">Listening for uploads…</div>
+      </div>
+      <div class="sb-sec" style="flex-shrink:0">
+        <div class="sb-lbl">Players</div>
+        <div class="pc-list" id="pcList"></div>
+      </div>
+      <div class="sb-scroll">
+        <div class="sb-lbl">Holes</div>
+        <div class="hole-grid" id="holeGrid"></div>
+      </div>
+    </div>
+    <div class="hub-content">
+      <div class="hub-tabs">
+        <button class="htab on" id="tab-clips" onclick="switchTab('clips')">📹 Clips</button>
+        <button class="htab" id="tab-hole" onclick="switchTab('hole')">⛳ Hole</button>
+        <button class="htab" id="tab-exports" onclick="switchTab('exports')">📤 Exports</button>
+        <button class="htab" id="tab-settings" onclick="switchTab('settings')">⚙ Graphics</button>
+      </div>
+      <div class="tab-pane on" id="tp-clips">
+        <div class="drop-zone" id="hubDrop">
+          <input type="file" id="hubFile" accept="video/*" multiple>
+          <div class="dz-i">📹</div>
+          <div class="dz-h">Add clips for Hole <span id="uzHole">1</span></div>
+          <div class="dz-p">Or filmers upload from their phones · Clips appear here in real time</div>
+        </div>
+        <div id="clipsWrap" style="display:none;flex-direction:column;gap:8px">
+          <div class="sec-h" id="clipsHdr">0 clips</div>
+          <div id="clipList"></div>
+        </div>
+        <div id="noClips" style="display:none;text-align:center;padding:28px;font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase">No clips for this hole yet</div>
+      </div>
+      <div class="tab-pane" id="tp-hole">
+        <div class="hs-card" id="holeCard"></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap" id="holeExportBtns"></div>
+      </div>
+      <div class="tab-pane" id="tp-exports">
+        <div style="font-size:.58rem;color:var(--muted);line-height:1.85;letter-spacing:.04em">
+          Export per-hole highlights to post live, or build full player reels at end of round. ★★★ clips are auto-prioritized.
+        </div>
+        <div class="exp-grid" id="expGrid"></div>
+      </div>
+      <div class="tab-pane" id="tp-settings">
+        <div class="lt-panel" id="ltPanel"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHONE UPLOADER -->
+<div class="view" id="v-phone">
+  <div class="ph-wrap">
+    <div class="ph-card" id="phCard">
+      <div>
+        <div class="ph-logo">⛳ Golf Studio</div>
+        <div class="ph-sub">Filmer Uploader</div>
+      </div>
+      <div class="ph-session-box">
+        <div style="font-size:.48rem;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:3px">Session</div>
+        <div class="ph-tournament" id="phTournament">—</div>
+        <div class="ph-code" id="phCode">——</div>
+      </div>
+      <div class="upload-status-ph idle" id="phConnStatus">Ready to upload</div>
+      <div class="ph-drop" id="phDrop">
+        <input type="file" id="phFile" accept="video/*" multiple capture="environment">
+        <div class="ph-drop-i">🎬</div>
+        <div class="ph-drop-h">Tap to add clips</div>
+        <div class="ph-drop-p">Select your clips then tag them below.<br>They upload directly to the session.</div>
+      </div>
+      <div class="ph-clips" id="phClips" style="display:none"></div>
+      <div id="phTagUI" style="display:none;flex-direction:column;gap:14px">
+        <div class="apply-note">Tags below apply to all selected clips.</div>
+        <div class="tap-section">
+          <div class="tap-lbl">Your camera role</div>
+          <div class="role-taps" id="phRoleTaps">
+            <div class="role-tap sel" data-role="swing" onclick="setPhRole('swing',this)"><div class="rt-icon">🏌</div><div class="rt-label">Swing Cam</div></div>
+            <div class="role-tap" data-role="landing" onclick="setPhRole('landing',this)"><div class="rt-icon">🎯</div><div class="rt-label">Landing Cam</div></div>
+          </div>
+        </div>
+        <div class="tap-section">
+          <div class="tap-lbl">Hole number</div>
+          <div class="hole-taps" id="phHoleTaps"></div>
+        </div>
+        <div class="tap-section">
+          <div class="tap-lbl">Shot type</div>
+          <div class="shot-taps" id="phShotTaps"></div>
+        </div>
+        <div class="tap-section">
+          <div class="tap-lbl">Player</div>
+          <div class="player-taps" id="phPlayerTaps">
+            <div class="player-tap sel" data-player="" onclick="setPhPlayer('',this)">
+              <div class="pt-dot" style="background:var(--muted)"></div>
+              <div class="pt-info"><div class="pt-name">All / Mixed</div><div class="pt-team">Multiple players in clip</div></div>
+              <div class="pt-check">✓</div>
+            </div>
+          </div>
+        </div>
+        <div class="tap-section" id="phHeroSection" style="display:none">
+          <div class="hero-toggle" id="phHeroToggle" onclick="togglePhHero()">
+            <div class="ht-switch"><div class="ht-knob"></div></div>
+            <div class="ht-text">
+              <div class="ht-title">🎬 Hero shot treatment</div>
+              <div class="ht-desc">Cinematic overlay — big player name, warm vignette. For chip-ins, long putts, moments worth celebrating.</div>
+            </div>
+          </div>
+        </div>
+        <div class="tap-section">
+          <div class="tap-lbl">Highlight rating</div>
+          <div class="star-taps" id="phStarTaps">
+            <div class="star-tap" data-stars="1" onclick="setPhStars(1,this)"><div class="star-tap-i">⭐</div><div class="star-tap-l">Good</div></div>
+            <div class="star-tap" data-stars="2" onclick="setPhStars(2,this)"><div class="star-tap-i">⭐⭐</div><div class="star-tap-l">Great</div></div>
+            <div class="star-tap" data-stars="3" onclick="setPhStars(3,this)"><div class="star-tap-i">⭐⭐⭐</div><div class="star-tap-l">Best</div></div>
+          </div>
+        </div>
+        <div id="upProgressWrap" style="display:none" class="up-progress">
+          <div class="up-file-name" id="upFileName">—</div>
+          <div class="up-bar-bg"><div class="up-bar-fill" id="upBarFill"></div></div>
+          <div class="up-pct" id="upPct">0%</div>
+        </div>
+      </div>
+      <button class="btn btn-gold" style="width:100%;padding:14px;font-size:.68rem" id="phSubmitBtn" disabled onclick="phSubmit()">Send to Session →</button>
+      <button id="switchToEditorBtn" style="display:none;width:100%" class="btn btn-ghost btn-sm" onclick="showHub()">Open full editor (desktop) →</button>
+    </div>
+    <div class="ph-card" id="phDoneCard" style="display:none">
+      <div class="ph-done">
+        <div class="ph-done-i">✅</div>
+        <div class="ph-done-h">Clips uploaded!</div>
+        <div class="ph-done-p">Your clips are in the session.<br>The host will see them immediately.<br><br>Tap below to add more clips.</div>
+      </div>
+      <button class="btn btn-outline" style="width:100%" onclick="phReset()">Add more clips →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="overlay" id="expOverlay">
+  <div class="exp-modal">
+    <div class="em-hdr">
+      <div class="em-t" id="emTitle">Export</div>
+      <button class="em-x" onclick="closeExport()">✕</button>
+    </div>
+    <div class="em-body">
+      <video class="em-vid" id="emVid" controls playsinline style="display:none"></video>
+      <div id="emFormatWrap">
+        <div style="font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">Output format</div>
+        <div class="fmt-grid">
+          <div class="fmt-card sel" data-fmt="16:9" onclick="setExportFmt('16:9',this)">
+            <div class="fmt-preview"><div class="fmt-rect fmt-16-9"><div class="fmt-rect-inner"></div></div></div>
+            <div class="fmt-label">16 : 9</div><div class="fmt-sub">Landscape · YouTube</div>
+          </div>
+          <div class="fmt-card" data-fmt="9:16" onclick="setExportFmt('9:16',this)">
+            <div class="fmt-preview"><div class="fmt-rect fmt-9-16"><div class="fmt-rect-inner"></div></div></div>
+            <div class="fmt-label">9 : 16</div><div class="fmt-sub">Portrait · Reels</div>
+          </div>
+          <div class="fmt-card" data-fmt="1:1" onclick="setExportFmt('1:1',this)">
+            <div class="fmt-preview"><div class="fmt-rect fmt-1-1"><div class="fmt-rect-inner"></div></div></div>
+            <div class="fmt-label">1 : 1</div><div class="fmt-sub">Square · Instagram</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:.58rem;color:var(--muted);line-height:1.8" id="emDesc">—</div>
+      <div id="emSeqWrap" style="display:none">
+        <div style="font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:5px">Clip sequence</div>
+        <div class="em-seq" id="emSeq"></div>
+      </div>
+    </div>
+    <div class="em-foot">
+      <button class="btn btn-outline btn-sm" onclick="closeExport()">Cancel</button>
+      <button class="btn btn-gold btn-sm" id="emRender" onclick="startRender()">⬛ Render &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="prog-bg" id="progBG">
+  <div class="prog-box">
+    <div class="pb-t">Rendering</div>
+    <div class="pb-s" id="pbSub">Preparing…</div>
+    <div class="pb-bg"><div class="pb-f" id="pbFill"></div></div>
+    <div class="pb-p" id="pbPct">0%</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase + App -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { initializeApp }     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, updateDoc, setDoc, collection,
+         onSnapshot, serverTimestamp, increment, deleteDoc, query, orderBy
+       }                      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject
+       }                      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+
+// !! PASTE YOUR FIREBASE CONFIG HERE !!
+const firebaseConfig = {
+  apiKey: "AIzaSyDiRzPk409QDK1q1SJ273uvA8co_Yin0bM",
+  authDomain: "golf-highlight-studio.firebaseapp.com",
+  projectId: "golf-highlight-studio",
+  storageBucket: "golf-highlight-studio.firebasestorage.app",
+  messagingSenderId: "180496097081",
+  appId: "1:180496097081:web:6138fd176c777f41b212e8"
+};
+
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const stor = getStorage(app);
+
+// ══════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════
+const SHOTS=[
+  {key:'tee',   label:'Tee Shot',    icon:'🏌',color:'#5a9fd5',order:0,ideal:4.5},
+  {key:'fair',  label:'Fairway',     icon:'🌿',color:'#46a858',order:1,ideal:3.5},
+  {key:'app',   label:'Approach',    icon:'🎯',color:'#d08a1e',order:2,ideal:3.5},
+  {key:'chip',  label:'Chip',        icon:'🔶',color:'#a450b0',order:3,ideal:3},
+  {key:'putt',  label:'Putt',        icon:'⛳',color:'#34a8b6',order:4,ideal:4},
+  {key:'hole',  label:'Hole Out',    icon:'🏆',color:'#c9aa4e',order:5,ideal:5},
+  {key:'celeb', label:'Celebration', icon:'🎉',color:'#e8765a',order:6,ideal:4,hero:true},
+];
+const SHOT_MAP=Object.fromEntries(SHOTS.map(s=>[s.key,s]));
+const ROLES=[{key:'swing',label:'Swing Cam',icon:'🏌',order:0},{key:'landing',label:'Landing Cam',icon:'🎯',order:1}];
+const ROLE_MAP=Object.fromEntries(ROLES.map(r=>[r.key,r]));
+const P_COLORS=['#c9aa4e','#46a858','#5a9fd5','#a450b0','#d08a1e'];
+const STAR_ICONS=['','⭐','⭐⭐','⭐⭐⭐'];
+const LT_FIELDS=[
+  {key:'playerName',label:'Player Name',default:true},
+  {key:'teamName',  label:'School/Team', default:true},
+  {key:'shotType',  label:'Shot Type',  default:true},
+  {key:'holeNum',   label:'Hole Number',default:true},
+  {key:'tournament',label:'Tournament', default:true},
+  {key:'role',      label:'Camera Role',default:false},
+  {key:'stars',     label:'Star Rating',default:false},
+];
+const FORMATS={'16:9':{W:1280,H:720},'9:16':{W:720,H:1280},'1:1':{W:1080,H:1080}};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let S={
+  code:null, tournament:'', players:[], holes:18, currentHole:1,
+  lt:{style:'broadcast',fields:Object.fromEntries(LT_FIELDS.map(f=>[f.key,f.default]))},
+  clips:[],   // local cache of Firestore clip docs + downloadURL + local blob url
+  exportQueue:null, isHost:false,
+};
+let phFiles=[], phRole='swing', phHole=1, phShot='tee', phPlayer='', phStars=0, phHeroOverride=false;
+let _exportFmt='16:9', _toastT;
+let _unsubClips=null; // Firestore real-time listener unsubscribe
+
+// ══════════════════════════════════════════════
+// ROUTING — detect session code from URL
+// ══════════════════════════════════════════════
+(async function init(){
+  const params = new URLSearchParams(location.search);
+  const code = (params.get('code') || params.get('session') || '').toUpperCase();
+  if(!code){ location.href='/'; return; }
+  S.code = code;
+
+  try{
+    const snap = await getDoc(doc(db,'sessions',code));
+    if(!snap.exists()){ setLoadingText('Session not found'); return; }
+    const data = snap.data();
+    S.tournament = data.tournament||'';
+    S.players    = data.players||[];
+    S.holes      = data.holes||18;
+    S.lt         = data.lt || S.lt;
+
+    // Decide: mobile = phone uploader, desktop = hub editor
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    console.log('Session loaded:', S.code, 'Players:', S.players.length, 'isMobile:', isMobile);
+    if(isMobile){
+      initPhone();
+    } else {
+      S.isHost = true;
+      initHub();
+    }
+  }catch(e){
+    setLoadingText('Error loading session: '+e.message);
+    console.error(e);
+  }
+})();
+
+function setLoadingText(t){ document.getElementById('loadingText').textContent=t; }
+
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+window.showHub=()=>showView('v-hub');
+
+// ══════════════════════════════════════════════
+// HUB INIT
+// ══════════════════════════════════════════════
+function initHub(){
+  document.getElementById('hTournament').textContent = S.tournament;
+  document.getElementById('hCode').textContent = S.code;
+  document.getElementById('sbCode').textContent = S.code;
+  const link = location.origin + '/session.html?code=' + S.code;
+  document.getElementById('sbLink').value = link;
+  drawQR(link, 'sbQR', 108);
+  buildPC(); buildHoleGrid(); setHole(1);
+  buildExpGrid(); buildLTPanel();
+
+  const drop=document.getElementById('hubDrop'), inp=document.getElementById('hubFile');
+  drop.onclick=()=>inp.click();
+  inp.onchange=e=>ingestLocal(e.target.files);
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag-over')};
+  drop.ondragleave=()=>drop.classList.remove('drag-over');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag-over');ingestLocal(e.dataTransfer.files)};
+
+  // Real-time listener for clips from Firestore
+  startClipsListener();
+  showView('v-hub');
+}
+
+window.copyLink=function(){
+  navigator.clipboard.writeText(document.getElementById('sbLink').value).catch(()=>{});
+  const b=document.getElementById('sbCopy'); b.textContent='✓'; b.classList.add('ok');
+  setTimeout(()=>{b.textContent='Copy';b.classList.remove('ok');},2000);
+  toast('Link copied!');
+};
+
+// ══════════════════════════════════════════════
+// FIRESTORE REAL-TIME CLIPS LISTENER
+// ══════════════════════════════════════════════
+function startClipsListener(){
+  if(_unsubClips) _unsubClips();
+  const clipsRef = collection(db,'sessions',S.code,'clips');
+  _unsubClips = onSnapshot(query(clipsRef, orderBy('uploadedAt','asc')), snap=>{
+    let newClips = false;
+    snap.docChanges().forEach(change=>{
+      const d = {id:change.doc.id, ...change.doc.data()};
+      if(change.type==='added'){
+        // Avoid duplicates from local ingest
+        if(!S.clips.find(c=>c.id===d.id)){
+          S.clips.push(d);
+          newClips = true;
+          // Show upload activity
+          document.getElementById('uploadStatus').textContent=`↓ ${d.name} received`;
+          document.getElementById('uploadStatus').classList.add('active');
+          setTimeout(()=>{
+            document.getElementById('uploadStatus').textContent='Listening for uploads…';
+            document.getElementById('uploadStatus').classList.remove('active');
+          }, 3000);
+        }
+      } else if(change.type==='modified'){
+        const idx=S.clips.findIndex(c=>c.id===d.id);
+        if(idx>=0) S.clips[idx]={...S.clips[idx],...d};
+        else S.clips.push(d);
+        newClips=true;
+      } else if(change.type==='removed'){
+        S.clips=S.clips.filter(c=>c.id!==d.id);
+        newClips=true;
+      }
+    });
+    if(newClips){ renderClipList(); refreshHoleGrid(); updatePC(); buildExpGrid(); }
+  }, err=>console.warn('Clips listener error:',err));
+}
+
+// ══════════════════════════════════════════════
+// LOCAL INGEST (host drags files onto editor)
+// ══════════════════════════════════════════════
+async function ingestLocal(files){
+  for(const f of Array.from(files)){
+    if(!f.type.startsWith('video/')) continue;
+    const id   = uid();
+    const name = f.name.replace(/\.[^.]+$/,'');
+    const pl   = S.players[0]||{name:'',team:''};
+    const localUrl = URL.createObjectURL(f);
+    const dur  = await vidDur(localUrl);
+    const meta = {
+      id, name, hole:S.currentHole, player:pl.name, team:pl.team,
+      shotKey:'tee', role:'swing', stars:0, heroOverride:false,
+      trimStart:0, trimEnd:dur, dur,
+      uploadedAt: Date.now(), uploadedBy:'host',
+    };
+    // Optimistically add to local state with blob URL
+    S.clips.push({...meta, url:localUrl, uploading:true, uploadPct:0});
+    renderClipList(); refreshHoleGrid(); updatePC();
+    // Upload to Firebase Storage then write Firestore doc
+    uploadToFirebase(f, id, meta, localUrl);
+  }
+}
+
+async function uploadToFirebase(file, clipId, meta, localUrl){
+  const path  = `sessions/${S.code}/clips/${clipId}_${file.name}`;
+  const sRef  = ref(stor, path);
+  const task  = uploadBytesResumable(sRef, file);
+
+  task.on('state_changed',
+    snap=>{
+      const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100);
+      updateClipUploadProgress(clipId, pct);
+    },
+    err=>{ console.error('Upload error:',err); updateClipUploadProgress(clipId,-1); },
+    async ()=>{
+      const url = await getDownloadURL(task.snapshot.ref);
+      // Write Firestore doc — this triggers the real-time listener on all editors
+      const clipDoc = {...meta, storagePath:path, downloadURL:url, uploadedAt:serverTimestamp()};
+      await setDoc(doc(db,'sessions',S.code,'clips',clipId), clipDoc);
+      // Update local clip with real URL
+      const c=S.clips.find(x=>x.id===clipId);
+      if(c){ c.url=url; c.downloadURL=url; c.uploading=false; c.storagePath=path; }
+      // Bump session clip count
+      await updateDoc(doc(db,'sessions',S.code),{clipCount:increment(1),updatedAt:serverTimestamp()});
+      renderClipList();
+    }
+  );
+}
+
+function updateClipUploadProgress(clipId, pct){
+  const c=S.clips.find(x=>x.id===clipId);
+  if(c) c.uploadPct=pct;
+  const card=document.getElementById('cc-'+clipId);
+  if(!card) return;
+  const fill=card.querySelector('.cc-up-fill');
+  const pctEl=card.querySelector('.cc-up-pct');
+  if(fill) fill.style.width=(pct<0?0:pct)+'%';
+  if(pctEl) pctEl.textContent=pct<0?'Error':pct+'%';
+  if(pct===100||pct<0){
+    setTimeout(()=>{const ov=card.querySelector('.cc-uploading');if(ov)ov.style.display='none';},500);
+  }
+}
+
+// ══════════════════════════════════════════════
+// HUB UI
+// ══════════════════════════════════════════════
+function buildPC(){
+  const wrap=document.getElementById('pcList'); wrap.innerHTML='';
+  S.players.forEach((p,i)=>{
+    const n=S.clips.filter(c=>c.player===p.name).length;
+    const d=document.createElement('div'); d.className='pc'; d.id='pc-'+i;
+    d.innerHTML=`<div class="pc-dot" style="background:${p.color}"></div>
+      <div class="pc-info"><div class="pc-name">${p.name}</div><div class="pc-team">${p.team||'—'}</div></div>
+      <div class="pc-cnt" id="pcc-${i}">${n}</div>`;
+    wrap.appendChild(d);
+  });
+}
+function buildHoleGrid(){
+  const g=document.getElementById('holeGrid'); g.innerHTML='';
+  for(let h=1;h<=S.holes;h++){
+    const b=document.createElement('button'); b.className='hb'; b.id='hb-'+h; b.textContent=h;
+    b.onclick=()=>setHole(h); g.appendChild(b);
+  }
+  refreshHoleGrid();
+}
+function refreshHoleGrid(){
+  for(let h=1;h<=S.holes;h++){
+    const b=document.getElementById('hb-'+h); if(!b) continue;
+    b.className='hb'+(S.clips.some(c=>c.hole===h)?' has':'')+(h===S.currentHole?' cur':'');
+  }
+}
+function setHole(h){
+  S.currentHole=h;
+  document.getElementById('hHole').textContent=h;
+  document.getElementById('uzHole').textContent=h;
+  refreshHoleGrid(); renderClipList(); renderHoleSummary();
+}
+function switchTab(name){
+  ['clips','hole','exports','settings'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('on',t===name);
+    document.getElementById('tp-'+t).classList.toggle('on',t===name);
+  });
+  if(name==='hole') renderHoleSummary();
+  if(name==='exports') buildExpGrid();
+  if(name==='settings') buildLTPanel();
+}
+function updatePC(){
+  S.players.forEach((_,i)=>{
+    const el=document.getElementById('pcc-'+i);
+    if(el) el.textContent=S.clips.filter(c=>c.player===S.players[i].name).length;
+  });
+}
+
+// ══════════════════════════════════════════════
+// CLIP LIST
+// ══════════════════════════════════════════════
+function renderClipList(){
+  const hc=S.clips.filter(c=>c.hole===S.currentHole);
+  const wrap=document.getElementById('clipsWrap'), noMsg=document.getElementById('noClips'), list=document.getElementById('clipList');
+  if(!hc.length){ wrap.style.display='none'; noMsg.style.display=''; return; }
+  wrap.style.display='flex'; noMsg.style.display='none';
+  document.getElementById('clipsHdr').textContent=`Hole ${S.currentHole} — ${hc.length} clip${hc.length!==1?'s':''}`;
+  list.innerHTML='';
+  const sorted=[...hc].sort((a,b)=>{
+    const so=(SHOT_MAP[a.shotKey]?.order??99)-(SHOT_MAP[b.shotKey]?.order??99);
+    if(so!==0) return so;
+    return (ROLE_MAP[a.role]?.order??0)-(ROLE_MAP[b.role]?.order??0);
+  });
+  sorted.forEach(c=>list.appendChild(makeClipCard(c)));
+}
+
+function makeClipCard(clip){
+  const row=document.createElement('div'); row.className='clip-card'; row.id='cc-'+clip.id;
+  const st=SHOT_MAP[clip.shotKey]||SHOTS[0];
+  const pl=S.players.find(p=>p.name===clip.player);
+  const pColor=pl?.color||'var(--muted)';
+  const url=clip.url||clip.downloadURL||'';
+  const starClass=clip.stars>0?'s'+clip.stars:'';
+  const thumbContent=url
+    ? `<video src="${url}" muted preload="metadata"></video>`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--s3)"><div style="font-size:1.1rem;opacity:.4">☁</div></div>`;
+  const uploadingHTML=clip.uploading
+    ? `<div class="cc-uploading"><div class="cc-up-bar"><div class="cc-up-fill" style="width:${clip.uploadPct||0}%"></div></div><div class="cc-up-pct">${clip.uploadPct||0}%</div></div>` : '';
+
+  row.innerHTML=`
+    <div class="cc-thumb">${thumbContent}${uploadingHTML}
+      <div class="cc-dur">${fmt(clip.dur||0)}</div>
+      ${clip.stars?`<div class="cc-star">${STAR_ICONS[clip.stars]}</div>`:''}
+    </div>
+    <div class="cc-body">
+      <div class="cc-name">${clip.name}</div>
+      <div class="cc-meta">
+        <div class="cc-tag cc-hole-tag">H${clip.hole}</div>
+        <div class="cc-tag" style="border-color:${pColor}55;color:${pColor}">${clip.player||'—'}</div>
+        <div class="cc-tag" style="border-color:${st.color}55;color:${st.color}">${st.icon} ${st.label}</div>
+        <div class="cc-tag" style="border:1px solid var(--bdr);color:var(--muted)">${ROLE_MAP[clip.role]?.icon||''} ${ROLE_MAP[clip.role]?.label||''}</div>
+        <div class="cc-tag" style="border:1px solid var(--bdr);color:var(--muted);cursor:pointer" onclick="cycleStars('${clip.id}')">${clip.stars?STAR_ICONS[clip.stars]:'☆ Rate'}</div>
+      </div>
+    </div>
+    <div class="cc-actions">
+      <button class="ic-btn edit" onclick="editClip('${clip.id}')">✎</button>
+      <button class="ic-btn" onclick="removeClip('${clip.id}')">✕</button>
+    </div>`;
+  return row;
+}
+
+async function cycleStars(id){
+  const c=S.clips.find(x=>x.id===id); if(!c) return;
+  c.stars=(c.stars+1)%4;
+  renderClipList();
+  if(c.storagePath||c.downloadURL) await updateDoc(doc(db,'sessions',S.code,'clips',id),{stars:c.stars});
+}
+
+function editClip(id){
+  const c=S.clips.find(x=>x.id===id); if(!c) return;
+  const card=document.getElementById('cc-'+id); if(!card) return;
+  const st=SHOT_MAP[c.shotKey]||SHOTS[0];
+  const editor=document.createElement('div');
+  editor.style.cssText='background:var(--s2);border:1px solid rgba(201,170,78,.3);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px;animation:fu .2s ease both';
+  const pPills=S.players.map(p=>`<button class="pill" style="${c.player===p.name?`border-color:${p.color};color:${p.color};background:${p.color}18`:''}" onclick="setCP('${id}','player','${p.name}','${p.team}',this,event)">${p.name}</button>`).join('');
+  const sPills=SHOTS.map(s=>`<button class="pill" style="${c.shotKey===s.key?`border-color:${s.color};color:${s.color};background:${s.color}18`:''}" onclick="setCP('${id}','shot','${s.key}','',this,event)">${s.icon} ${s.label}</button>`).join('');
+  const rPills=ROLES.map(r=>`<button class="pill" style="${c.role===r.key?'border-color:var(--gold2);color:var(--gold2);background:rgba(201,170,78,.1)':''}" onclick="setCP('${id}','role','${r.key}','',this,event)">${r.icon} ${r.label}</button>`).join('');
+  const stPills=[0,1,2,3].map(s=>`<button class="pill" style="${c.stars===s?'border-color:var(--gold);color:var(--gold);background:rgba(201,170,78,.1)':''}" onclick="setCP('${id}','stars','${s}','',this,event)">${s===0?'None':STAR_ICONS[s]}</button>`).join('');
+  editor.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:.62rem;color:var(--gold2);font-family:var(--serif)">Edit Tags</div>
+      <button class="btn btn-ghost btn-xs" onclick="renderClipList()">Done ✓</button>
+    </div>
+    <div><div class="fl" style="margin-bottom:5px">Player</div><div class="pills">${pPills}</div></div>
+    <div><div class="fl" style="margin-bottom:5px">Shot Type</div><div class="pills">${sPills}</div></div>
+    <div><div class="fl" style="margin-bottom:5px">Camera Role</div><div class="pills">${rPills}</div></div>
+    <div><div class="fl" style="margin-bottom:5px">Star Rating</div><div class="pills">${stPills}</div></div>`;
+  card.replaceWith(editor);
+}
+
+window.setCP=async function(id,field,val,extra,btn,e){
+  e.stopPropagation();
+  const c=S.clips.find(x=>x.id===id); if(!c) return;
+  const update={};
+  if(field==='player'){c.player=val;c.team=extra;update.player=val;update.team=extra;}
+  else if(field==='shot'){c.shotKey=val;update.shotKey=val;}
+  else if(field==='role'){c.role=val;update.role=val;}
+  else if(field==='stars'){c.stars=parseInt(val);update.stars=c.stars;}
+  btn.closest('.pills').querySelectorAll('.pill').forEach(p=>{p.style.borderColor='';p.style.color='';p.style.background='';});
+  if(field==='player'){const pl=S.players.find(p=>p.name===val);if(pl){btn.style.borderColor=pl.color;btn.style.color=pl.color;btn.style.background=pl.color+'18';}}
+  else if(field==='shot'){const st=SHOT_MAP[val];btn.style.borderColor=st.color;btn.style.color=st.color;btn.style.background=st.color+'18';}
+  else{btn.style.borderColor='var(--gold2)';btn.style.color='var(--gold2)';btn.style.background='rgba(201,170,78,.1)';}
+  if(Object.keys(update).length && (c.storagePath||c.downloadURL)){
+    await updateDoc(doc(db,'sessions',S.code,'clips',id), update);
+  }
+  updatePC(); renderHoleSummary();
+};
+
+async function removeClip(id){
+  const c=S.clips.find(x=>x.id===id);
+  S.clips=S.clips.filter(x=>x.id!==id);
+  renderClipList(); refreshHoleGrid(); updatePC(); buildExpGrid();
+  if(c?.storagePath){
+    try{ await deleteObject(ref(stor,c.storagePath)); }catch(e){}
+    try{
+      await deleteDoc(doc(db,'sessions',S.code,'clips',id));
+      await updateDoc(doc(db,'sessions',S.code),{clipCount:increment(-1),updatedAt:serverTimestamp()});
+    }catch(e){}
+  }
+}
+
+// ══════════════════════════════════════════════
+// HOLE SUMMARY
+// ══════════════════════════════════════════════
+function renderHoleSummary(){
+  const hc=S.clips.filter(c=>c.hole===S.currentHole);
+  const card=document.getElementById('holeCard'), btns=document.getElementById('holeExportBtns');
+  btns.innerHTML='';
+  if(!hc.length){card.innerHTML=`<div class="hs-h">Hole ${S.currentHole}</div><div style="font-size:.6rem;color:var(--muted);padding:8px 0">No clips yet</div>`;return;}
+  let html=`<div class="hs-h">Hole ${S.currentHole} · <span style="color:var(--green3)">${hc.length} clips</span></div>`;
+  S.players.forEach((p,i)=>{
+    const pc=hc.filter(c=>c.player===p.name); if(!pc.length) return;
+    const pips=pc.map(c=>{const st=SHOT_MAP[c.shotKey]||SHOTS[0];return `<span class="shot-pip" style="background:${st.color}20;color:${st.color};border:1px solid ${st.color}55">${st.label}</span>`;}).join('');
+    html+=`<div class="hs-pr"><div class="hsp-dot" style="background:${p.color}"></div><div class="hsp-info"><div class="hsp-name">${p.name}</div><div class="hsp-team">${p.team}</div></div><div class="hsp-shots">${pips}</div></div>`;
+    const b=document.createElement('button'); b.className='btn btn-outline btn-sm';
+    b.style.cssText=`border-color:${p.color}66;color:${p.color}`;
+    b.textContent=p.name+' only'; b.onclick=()=>openExport('player-hole',p.name);
+    btns.appendChild(b);
+  });
+  card.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+// EXPORT GRID
+// ══════════════════════════════════════════════
+function buildExpGrid(){
+  const g=document.getElementById('expGrid'); g.innerHTML='';
+  const cards=[
+    {icon:'⛳',title:`Hole ${S.currentHole} — All Players`,desc:`Broadcast highlight, all players on hole ${S.currentHole}.`,meta:S.clips.filter(c=>c.hole===S.currentHole).length+' clips',fn:()=>openExport('hole')},
+    ...S.players.map((p,i)=>({icon:'🏌',title:`${p.name} — Hole ${S.currentHole}`,desc:`${p.name} (${p.team||'—'}) hole ${S.currentHole} shots.`,meta:S.clips.filter(c=>c.player===p.name&&c.hole===S.currentHole).length+' clips',color:p.color,fn:()=>openExport('player-hole',p.name)})),
+    {icon:'🎬',title:'Round Highlight ★★★',desc:'Best-rated shots across the full round.',meta:S.clips.length+' total clips',fn:()=>openExport('round-best')},
+    ...S.players.map((p,i)=>({icon:'🏆',title:`${p.name} — Full Reel`,desc:`Every clip of ${p.name} across all holes.`,meta:S.clips.filter(c=>c.player===p.name).length+' clips',color:p.color,fn:()=>openExport('player-round',p.name)})),
+  ];
+  cards.forEach(card=>{
+    const d=document.createElement('div'); d.className='exp-c';
+    if(card.color) d.style.borderColor=card.color+'44';
+    d.innerHTML=`<div class="exp-c-i">${card.icon}</div><div class="exp-c-t"${card.color?` style="color:${card.color}"`:''}>${card.title}</div><div class="exp-c-d">${card.desc}</div><div class="exp-c-m">${card.meta}</div>`;
+    d.onclick=card.fn; g.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════
+// LT SETTINGS
+// ══════════════════════════════════════════════
+function buildLTPanel(){
+  const panel=document.getElementById('ltPanel');
+  panel.innerHTML=`
+    <div class="lt-panel-h">Lower-Third Graphics</div>
+    <div style="margin-bottom:4px"><div class="fl" style="margin-bottom:7px">Style</div>
+      <div class="lt-presets-hub" id="ltStyleBtns">
+        <div class="ltp ${S.lt.style==='broadcast'?'active':''}" onclick="updateLTStyle('broadcast',this)">Broadcast</div>
+        <div class="ltp ${S.lt.style==='minimal'?'active':''}" onclick="updateLTStyle('minimal',this)">Minimal</div>
+        <div class="ltp ${S.lt.style==='none'?'active':''}" onclick="updateLTStyle('none',this)">None</div>
+      </div>
+    </div>
+    <div id="ltFieldsPanel" style="${S.lt.style==='none'?'display:none':''}">
+      <div class="fl" style="margin-bottom:7px">Fields</div>
+      <div class="lt-toggles-hub" id="ltFieldsHub"></div>
+    </div>`;
+  const wrap=document.getElementById('ltFieldsHub'); if(!wrap) return;
+  LT_FIELDS.forEach(f=>{
+    const on=S.lt.fields[f.key];
+    const d=document.createElement('div'); d.className='lt-toggle'+(on?' on':'');
+    d.onclick=async()=>{
+      S.lt.fields[f.key]=!S.lt.fields[f.key];
+      d.classList.toggle('on',S.lt.fields[f.key]); d.querySelector('.ltt-check').textContent=S.lt.fields[f.key]?'✓':'';
+      await updateDoc(doc(db,'sessions',S.code),{lt:S.lt,updatedAt:serverTimestamp()});
+    };
+    d.innerHTML=`<div class="ltt-check">${on?'✓':''}</div><div class="ltt-label">${f.label}</div>`;
+    wrap.appendChild(d);
+  });
+}
+window.updateLTStyle=async function(style,el){
+  S.lt.style=style;
+  document.querySelectorAll('#ltStyleBtns .ltp').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  const fp=document.getElementById('ltFieldsPanel'); if(fp) fp.style.display=style==='none'?'none':'';
+  await updateDoc(doc(db,'sessions',S.code),{lt:S.lt,updatedAt:serverTimestamp()});
+};
+
+// ══════════════════════════════════════════════
+// EXPORT / RENDER
+// ══════════════════════════════════════════════
+function buildSeq(type,player){
+  let pool=[...S.clips];
+  if(type==='hole') pool=pool.filter(c=>c.hole===S.currentHole);
+  else if(type==='player-hole') pool=pool.filter(c=>c.hole===S.currentHole&&c.player===player);
+  else if(type==='player-round') pool=pool.filter(c=>c.player===player);
+  else if(type==='round-best') pool=[...pool].sort((a,b)=>b.stars-a.stars);
+  const celebs=pool.filter(c=>c.shotKey==='celeb');
+  const main=pool.filter(c=>c.shotKey!=='celeb');
+  main.sort((a,b)=>{
+    if(a.hole!==b.hole) return a.hole-b.hole;
+    const so=(SHOT_MAP[a.shotKey]?.order??99)-(SHOT_MAP[b.shotKey]?.order??99);
+    if(so!==0) return so;
+    const pi=S.players.findIndex(p=>p.name===a.player)-S.players.findIndex(p=>p.name===b.player);
+    if(pi!==0) return pi;
+    return (ROLE_MAP[a.role]?.order??0)-(ROLE_MAP[b.role]?.order??0);
+  });
+  const result=[];
+  for(const c of main){
+    result.push(c);
+    if(c.shotKey==='hole'){
+      celebs.filter(x=>x.hole===c.hole&&(x.player===c.player||!x.player)).forEach(x=>{if(!result.includes(x))result.push(x);});
+    }
+  }
+  celebs.forEach(c=>{if(!result.includes(c))result.push(c);});
+  return result;
+}
+
+window.openExport=function(type,player){
+  const seq=buildSeq(type,player);
+  if(!seq.length){toast('No clips for this export');return;}
+  S.exportQueue={type,player,seq};
+  const titles={hole:`Hole ${S.currentHole} — All Players`,'player-hole':`${player} — Hole ${S.currentHole}`,'round-best':'Round Highlight ★★★','player-round':`${player} — Full Round Reel`};
+  document.getElementById('emTitle').textContent=titles[type]||'Export';
+  document.getElementById('emDesc').textContent=`${seq.length} clips`;
+  const sw=document.getElementById('emSeqWrap'), se=document.getElementById('emSeq');
+  sw.style.display=''; se.innerHTML='';
+  seq.forEach(c=>{
+    const st=SHOT_MAP[c.shotKey]||SHOTS[0], pl=S.players.find(p=>p.name===c.player);
+    const d=document.createElement('div'); d.className='em-si';
+    d.innerHTML=`<div class="em-sid" style="background:${st.color}"></div>
+      <div class="em-sil">H${c.hole} · ${st.icon} ${st.label} · <span style="color:${pl?.color||'var(--muted)'}">${c.player||'—'}</span>${c.stars?` <span style="color:var(--gold)">${STAR_ICONS[c.stars]}</span>`:''}</div>
+      <div class="em-sib">${fmt(c.dur||0)}</div>`;
+    se.appendChild(d);
+  });
+  document.getElementById('emVid').style.display='none';
+  document.getElementById('emFormatWrap').style.display='';
+  document.querySelectorAll('.fmt-card').forEach(c=>c.classList.toggle('sel',c.dataset.fmt===_exportFmt));
+  document.getElementById('emRender').textContent='⬛ Render & Download';
+  document.getElementById('emRender').onclick=startRender;
+  document.getElementById('expOverlay').classList.add('on');
+};
+window.closeExport=()=>document.getElementById('expOverlay').classList.remove('on');
+window.setExportFmt=(fmt,el)=>{
+  _exportFmt=fmt;
+  document.querySelectorAll('.fmt-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+};
+
+async function startRender(){
+  const {seq,type,player}=S.exportQueue;
+  const fmt=FORMATS[_exportFmt]||FORMATS['16:9'];
+  closeExport();
+  document.getElementById('progBG').classList.add('on');
+  setProgress(0,'Setting up canvas…');
+  try{
+    const W=fmt.W, H=fmt.H;
+    const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
+    const ctx=canvas.getContext('2d');
+    const mime=getMime();
+    const stream=canvas.captureStream(30);
+    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:9000000});
+    const chunks=[]; rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    rec.start(100);
+    for(let i=0;i<seq.length;i++){
+      const clip=seq[i];
+      const st=SHOT_MAP[clip.shotKey]||SHOTS[0];
+      setProgress(Math.round((i/seq.length)*88),`H${clip.hole} · ${st.label} · ${clip.player||''} (${i+1}/${seq.length})`);
+      await renderClip(clip,canvas,ctx,W,H);
+    }
+    setProgress(94,'Encoding…');
+    await new Promise(r=>{rec.onstop=r;rec.stop();});
+    setProgress(100,'Done!');
+    const blob=new Blob(chunks,{type:mime}), url=URL.createObjectURL(blob);
+    document.getElementById('progBG').classList.remove('on');
+    const vid=document.getElementById('emVid'); vid.src=url; vid.style.display='block';
+    document.getElementById('emFormatWrap').style.display='none';
+    document.getElementById('emSeqWrap').style.display='none';
+    document.getElementById('emDesc').textContent=`${seq.length} clips · ${_exportFmt} · rendered in browser`;
+    const rb=document.getElementById('emRender');
+    rb.textContent='↓ Download'; rb.onclick=()=>{const a=document.createElement('a');a.href=url;a.download=makeFilename(type,player);a.click();};
+    document.getElementById('expOverlay').classList.add('on');
+  }catch(err){
+    document.getElementById('progBG').classList.remove('on');
+    alert('Render failed: '+err.message+'\nUse Chrome or Edge.');
+    console.error(err);
+  }
+}
+
+function renderClip(clip,canvas,ctx,W,H){
+  return new Promise((res,rej)=>{
+    const vid=document.createElement('video'); vid.src=clip.url||clip.downloadURL||''; vid.muted=true; vid.playsInline=true; vid.crossOrigin='anonymous';
+    const s=clip.trimStart||0, e=clip.trimEnd??clip.dur??0;
+    vid.onloadedmetadata=()=>{vid.currentTime=s;};
+    vid.onseeked=async()=>{
+      try{
+        await vid.play();
+        const st=SHOT_MAP[clip.shotKey]||SHOTS[0], pl=S.players.find(p=>p.name===clip.player);
+        const draw=()=>{
+          if(vid.paused||vid.ended||vid.currentTime>=e){vid.pause();return res();}
+          const vW=vid.videoWidth||W, vH=vid.videoHeight||H;
+          const sc=Math.min(W/vW,H/vH);
+          const dW=vW*sc, dH=vH*sc, dx=(W-dW)/2, dy=(H-dH)/2;
+          ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+          ctx.drawImage(vid,dx,dy,dW,dH);
+          if(clip.shotKey==='celeb'||clip.heroOverride) drawHeroShot(ctx,clip,pl,W,H);
+          else if(S.lt.style!=='none') drawLT(ctx,clip,st,pl,W,H);
+          requestAnimationFrame(draw);
+        };
+        requestAnimationFrame(draw);
+      }catch(err){rej(err);}
+    };
+    vid.onerror=rej; vid.load();
+  });
+}
+
+function drawLT(ctx,clip,st,pl,W,H){
+  const f=S.lt.fields, minimal=S.lt.style==='minimal';
+  const scale=Math.min(W,H)/720;
+  const fs={shot:Math.round(15*scale),player:Math.round(14*scale),team:Math.round(10*scale),hole:Math.round(11*scale),tournament:Math.round(9*scale),badge:Math.round(9*scale)};
+  const barH=Math.round((minimal?42:54)*scale), barW=minimal?W*0.6:W*0.65, alpha=minimal?0.5:0.65, lx=Math.round(14*scale);
+  ctx.fillStyle=`rgba(0,0,0,${alpha})`; ctx.fillRect(0,H-barH,barW,barH);
+  ctx.fillStyle=st.color; ctx.fillRect(0,H-(barH+2),barW,2);
+  const bW=Math.round(80*scale), bH=Math.round(26*scale);
+  if(f.holeNum){ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,bW,bH);ctx.fillStyle=st.color;ctx.fillRect(0,0,bW,2);ctx.font=`${fs.hole}px "Azeret Mono"`;ctx.fillStyle='#e0d7c2';ctx.fillText('HOLE '+clip.hole,Math.round(10*scale),Math.round(17*scale));}
+  if(f.tournament&&S.tournament){ctx.font=`${fs.tournament}px "Azeret Mono"`;ctx.fillStyle='rgba(201,170,78,.7)';ctx.textAlign='center';ctx.fillText(S.tournament.toUpperCase(),W/2,Math.round(16*scale));ctx.textAlign='left';}
+  if(f.shotType){ctx.font=`bold ${fs.shot}px "Azeret Mono"`;ctx.fillStyle=st.color;ctx.fillText(`${st.icon} ${st.label.toUpperCase()}`,lx,H-Math.round(barH-16*scale));}
+  if(f.playerName&&clip.player){ctx.font=`${fs.player}px "Libre Baskerville"`;ctx.fillStyle='#f3efe4';ctx.fillText(clip.player,lx,H-Math.round(barH-34*scale));}
+  if(f.teamName&&pl?.team){ctx.font=`${fs.team}px "Azeret Mono"`;ctx.fillStyle='rgba(224,215,194,.65)';ctx.fillText(pl.team.toUpperCase(),lx,H-Math.round(barH-50*scale));}
+  if(f.role){const role=ROLE_MAP[clip.role];ctx.font=`${fs.badge}px "Azeret Mono"`;ctx.fillStyle='rgba(201,170,78,.65)';ctx.textAlign='right';ctx.fillText(role?.label?.toUpperCase()||'',barW-Math.round(12*scale),H-Math.round(10*scale));ctx.textAlign='left';}
+  if(f.stars&&clip.stars>0){ctx.font=`${Math.round(11*scale)}px serif`;ctx.fillStyle='#c9aa4e';ctx.textAlign='right';ctx.fillText(STAR_ICONS[clip.stars],barW-Math.round(12*scale),H-Math.round(26*scale));ctx.textAlign='left';}
+  if(clip.shotKey==='hole'){const g=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.72);g.addColorStop(0,'transparent');g.addColorStop(1,'rgba(201,170,78,.2)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.font=`bold ${Math.round(17*scale)}px "Azeret Mono"`;ctx.fillStyle='#c9aa4e';ctx.textAlign='right';ctx.fillText('★ HOLE OUT',W-Math.round(16*scale),H-Math.round(12*scale));ctx.textAlign='left';}
+}
+
+function drawHeroShot(ctx,clip,pl,W,H){
+  const scale=Math.min(W,H)/720;
+  const vig=ctx.createRadialGradient(W/2,H/2,H*.18,W/2,H/2,H*.78);
+  vig.addColorStop(0,'transparent'); vig.addColorStop(1,'rgba(20,8,4,.55)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+  const lineY=H-Math.round(90*scale);
+  ctx.fillStyle='rgba(201,170,78,.7)'; ctx.fillRect(0,lineY,W,Math.round(2*scale));
+  if(clip.player){ctx.textAlign='center';ctx.font=`bold ${Math.round(38*scale)}px "Libre Baskerville"`;ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillText(clip.player,W/2+Math.round(2*scale),lineY+Math.round(52*scale)+Math.round(2*scale));ctx.fillStyle='#f3efe4';ctx.fillText(clip.player,W/2,lineY+Math.round(52*scale));ctx.textAlign='left';}
+  if(pl?.team){ctx.textAlign='center';ctx.font=`${Math.round(14*scale)}px "Azeret Mono"`;ctx.fillStyle='rgba(201,170,78,.85)';ctx.fillText(pl.team.toUpperCase(),W/2,lineY+Math.round(72*scale));ctx.textAlign='left';}
+  if(S.lt.style!=='none'){const bW=Math.round(110*scale),bH=Math.round(28*scale);ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(W-bW,0,bW,bH);ctx.fillStyle='#c9aa4e';ctx.fillRect(W-bW,0,bW,Math.round(2*scale));ctx.font=`bold ${Math.round(10*scale)}px "Azeret Mono"`;ctx.fillStyle='#c9aa4e';ctx.textAlign='right';ctx.fillText('★ HOLE OUT',W-Math.round(10*scale),Math.round(18*scale));ctx.textAlign='left';if(S.tournament){ctx.font=`${Math.round(9*scale)}px "Azeret Mono"`;ctx.fillStyle='rgba(201,170,78,.6)';ctx.textAlign='center';ctx.fillText(S.tournament.toUpperCase(),W/2,Math.round(16*scale));ctx.textAlign='left';}}
+}
+
+function makeFilename(type,player){
+  const t=S.tournament.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'');
+  const d=new Date().toISOString().slice(0,10);
+  const fs=_exportFmt.replace(':','x');
+  const m={hole:`${t}-H${S.currentHole}-AllPlayers`,'player-hole':`${t}-H${S.currentHole}-${(player||'').replace(/\s/g,'-')}`,'round-best':`${t}-RoundHighlight`,'player-round':`${t}-${(player||'').replace(/\s/g,'-')}-Reel`};
+  return (m[type]||'highlight')+'-'+fs+'-'+d+'.webm';
+}
+
+// ══════════════════════════════════════════════
+// PHONE UPLOADER
+// ══════════════════════════════════════════════
+function initPhone(){
+  document.getElementById('phCode').textContent=S.code;
+  document.getElementById('phTournament').textContent=S.tournament;
+  const drop=document.getElementById('phDrop'), inp=document.getElementById('phFile');
+  drop.onclick=()=>inp.click();
+  inp.onchange=e=>addPhFiles(e.target.files);
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag-over')};
+  drop.ondragleave=()=>drop.classList.remove('drag-over');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag-over');addPhFiles(e.dataTransfer.files)};
+  buildPhHoleTaps();
+  buildPhShotTaps();
+  buildPhPlayerTaps();
+  // Show editor button on tablet/larger phone
+  const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)&&window.innerWidth<600;
+  if(!isMobile) document.getElementById('switchToEditorBtn').style.display='';
+  showView('v-phone');
+}
+
+function addPhFiles(files){
+  phFiles.push(...Array.from(files).filter(f=>f.type.startsWith('video/')));
+  const list=document.getElementById('phClips');
+  list.style.display=phFiles.length?'':'none';
+  list.innerHTML=phFiles.map(f=>`<div class="ph-clip-row"><span style="font-size:.9rem">🎬</span><div class="ph-clip-name">${f.name.replace(/\.[^.]+$/,'')}</div><span style="font-size:.7rem;color:var(--green3)">✓</span></div>`).join('');
+  document.getElementById('phTagUI').style.display=phFiles.length?'flex':'none';
+  document.getElementById('phSubmitBtn').disabled=!phFiles.length;
+}
+
+window.setPhRole=function(key,el){
+  phRole=key;
+  document.querySelectorAll('#phRoleTaps .role-tap').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+};
+
+function buildPhHoleTaps(){
+  const wrap=document.getElementById('phHoleTaps'); wrap.innerHTML='';
+  for(let h=1;h<=S.holes;h++){
+    const d=document.createElement('div'); d.className='hole-tap'+(h===phHole?' sel':''); d.textContent=h;
+    d.onclick=()=>{phHole=h;document.querySelectorAll('#phHoleTaps .hole-tap').forEach(e=>e.classList.remove('sel'));d.classList.add('sel');};
+    wrap.appendChild(d);
+  }
+}
+
+function buildPhShotTaps(){
+  const wrap=document.getElementById('phShotTaps'); wrap.innerHTML='';
+  const selectShot=key=>{
+    phShot=key;
+    wrap.querySelectorAll('.shot-tap').forEach(e=>e.classList.remove('sel'));
+    wrap.querySelector(`[data-key="${key}"]`)?.classList.add('sel');
+    const hs=document.getElementById('phHeroSection'), ht=document.getElementById('phHeroToggle');
+    if(key==='hole'||key==='celeb'){hs.style.display='';}
+    else{hs.style.display='none';phHeroOverride=false;ht.classList.remove('on');}
+    if(key==='celeb'){phHeroOverride=true;ht.classList.add('on');}
+  };
+  SHOTS.forEach(st=>{
+    const d=document.createElement('div'); d.dataset.key=st.key;
+    if(st.key==='hole'){d.className='shot-tap hole-out-tap'+(phShot===st.key?' sel':'');d.innerHTML=`<div class="hot-icon">${st.icon}</div><div class="hot-label">★ ${st.label}</div>`;}
+    else if(st.key==='celeb'){d.className='shot-tap celeb-tap'+(phShot===st.key?' sel':'');d.innerHTML=`<div class="hot-icon">${st.icon}</div><div style="display:flex;flex-direction:column;gap:2px"><div class="celeb-label">Celebration / Hero Shot</div><div style="font-size:.52rem;color:var(--muted)">Film after hole out</div></div>`;}
+    else{d.className='shot-tap'+(phShot===st.key?' sel':'');d.innerHTML=`<div class="st-icon">${st.icon}</div><div class="st-label">${st.label}</div>`;}
+    d.onclick=()=>selectShot(st.key);
+    wrap.appendChild(d);
+  });
+}
+
+function buildPhPlayerTaps(){
+  const wrap=document.getElementById('phPlayerTaps'); wrap.innerHTML='';
+  const allDiv=document.createElement('div');
+  allDiv.className='player-tap'+(phPlayer===''?' sel':'');
+  allDiv.innerHTML=`<div class="pt-dot" style="background:var(--muted)"></div><div class="pt-info"><div class="pt-name">All / Mixed</div><div class="pt-team">Multiple players in clip</div></div><div class="pt-check">✓</div>`;
+  allDiv.onclick=()=>setPhPlayer('',allDiv);
+  wrap.appendChild(allDiv);
+  const players=S.players.length?S.players:[{name:'Player 1',team:'',color:P_COLORS[0]},{name:'Player 2',team:'',color:P_COLORS[1]},{name:'Player 3',team:'',color:P_COLORS[2]}];
+  players.forEach(p=>{
+    const d=document.createElement('div'); d.className='player-tap'+(phPlayer===p.name?' sel':'');
+    d.innerHTML=`<div class="pt-dot" style="background:${p.color}"></div><div class="pt-info"><div class="pt-name">${p.name}</div><div class="pt-team">${p.team||''}</div></div><div class="pt-check">✓</div>`;
+    d.onclick=()=>setPhPlayer(p.name,d);
+    wrap.appendChild(d);
+  });
+}
+
+window.setPhPlayer=function(name,el){
+  phPlayer=name;
+  document.querySelectorAll('#phPlayerTaps .player-tap').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+};
+window.togglePhHero=function(){
+  phHeroOverride=!phHeroOverride;
+  document.getElementById('phHeroToggle').classList.toggle('on',phHeroOverride);
+};
+window.setPhStars=function(n,el){
+  phStars=n;
+  document.querySelectorAll('#phStarTaps .star-tap').forEach(e=>{e.className='star-tap';});
+  el.classList.add('sel-'+n);
+};
+
+window.phSubmit = async function(){
+  const btn=document.getElementById('phSubmitBtn');
+  btn.disabled=true;
+  const statusEl=document.getElementById('phConnStatus');
+  const progWrap=document.getElementById('upProgressWrap');
+  const barFill=document.getElementById('upBarFill');
+  const pctEl=document.getElementById('upPct');
+  const nameEl=document.getElementById('upFileName');
+
+  for(const f of phFiles){
+    statusEl.className='upload-status-ph uploading';
+    statusEl.textContent=`Uploading ${f.name.replace(/\.[^.]+$/,'')}…`;
+    progWrap.style.display='flex';
+    nameEl.textContent=f.name.replace(/\.[^.]+$/,'');
+    barFill.style.width='0%'; pctEl.textContent='0%';
+
+    const id  = uid();
+    const dur = await vidDur(URL.createObjectURL(f));
+    const pl  = S.players.find(p=>p.name===phPlayer)||{name:phPlayer,team:'',color:P_COLORS[0]};
+    const meta={
+      id, name:f.name.replace(/\.[^.]+$/,''), dur, hole:phHole,
+      player:pl.name, team:pl.team, shotKey:phShot, role:phRole,
+      stars:phStars, heroOverride:phHeroOverride, trimStart:0, trimEnd:dur,
+      uploadedBy:'filmer', uploadedAt:Date.now(),
+    };
+    const path=`sessions/${S.code}/clips/${id}_${f.name}`;
+    const sRef=ref(stor,path);
+    const task=uploadBytesResumable(sRef,f);
+
+    await new Promise((res,rej)=>{
+      task.on('state_changed',
+        snap=>{
+          const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
+          barFill.style.width=pct+'%'; pctEl.textContent=pct+'%';
+        },
+        err=>{statusEl.className='upload-status-ph error';statusEl.textContent='Upload failed: '+err.message;rej(err);},
+        async()=>{
+          const url=await getDownloadURL(task.snapshot.ref);
+          await setDoc(doc(db,'sessions',S.code,'clips',id),{...meta,storagePath:path,downloadURL:url,uploadedAt:serverTimestamp()});
+          await updateDoc(doc(db,'sessions',S.code),{clipCount:increment(1),updatedAt:serverTimestamp()});
+          res();
+        }
+      );
+    }).catch(err=>console.error('Upload error:',err));
+  }
+
+  progWrap.style.display='none';
+  statusEl.className='upload-status-ph done';
+  statusEl.textContent=`✓ ${phFiles.length} clip${phFiles.length!==1?'s':''} uploaded to session`;
+  document.getElementById('phCard').style.display='none';
+  document.getElementById('phDoneCard').style.display='';
+}
+
+window.phReset=function(){
+  phFiles=[]; phHeroOverride=false;
+  document.getElementById('phHeroToggle')?.classList.remove('on');
+  document.getElementById('phHeroSection').style.display='none';
+  document.getElementById('phCard').style.display='';
+  document.getElementById('phDoneCard').style.display='none';
+  document.getElementById('phClips').style.display='none';
+  document.getElementById('phClips').innerHTML='';
+  document.getElementById('phTagUI').style.display='none';
+  document.getElementById('phConnStatus').className='upload-status-ph idle';
+  document.getElementById('phConnStatus').textContent='Ready to upload';
+  const btn=document.getElementById('phSubmitBtn'); btn.disabled=true; btn.textContent='Send to Session →';
+};
+
+// ══════════════════════════════════════════════
+// QR / UTILS
+// ══════════════════════════════════════════════
+const _qrInstances={};
+function drawQR(url,containerId,size){
+  const el=document.getElementById(containerId); if(!el) return;
+  el.innerHTML='';
+  if(_qrInstances[containerId]) try{_qrInstances[containerId].clear();}catch(e){}
+  _qrInstances[containerId]=new QRCode(el,{text:url,width:size,height:size,colorDark:'#c9aa4e',colorLight:'#0b1c10',correctLevel:QRCode.CorrectLevel.M});
+  setTimeout(()=>{const img=el.querySelector('img,canvas');if(img){img.style.display='block';img.style.width=size+'px';img.style.height=size+'px';}},100);
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function fmt(s){ if(!s||isNaN(s)) return '0s'; return s<60?s.toFixed(1)+'s':Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
+function vidDur(url){ return new Promise(r=>{ const v=document.createElement('video'); v.src=url; v.onloadedmetadata=()=>r(v.duration); v.onerror=()=>r(0); }); }
+function getMime(){ for(const t of['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4']) if(MediaRecorder.isTypeSupported(t)) return t; return ''; }
+function setProgress(pct,label){ document.getElementById('pbFill').style.width=pct+'%'; document.getElementById('pbPct').textContent=pct+'%'; document.getElementById('pbSub').textContent=label; }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('on'),2800); }
+</script>
+</body>
+</html>
