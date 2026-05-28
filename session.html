@@ -1023,10 +1023,22 @@ window.startRender=async function(){
     const W=fmt.W, H=fmt.H;
     const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
     const ctx=canvas.getContext('2d');
+    if(!ctx) throw new Error('Could not get canvas 2D context');
+    // Draw initial black frame
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
     const mime=getMime();
-    const stream=canvas.captureStream(30);
-    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:9000000});
-    const chunks=[]; rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    console.log('Rendering with MIME type:', mime);
+    let stream;
+    try{ stream=canvas.captureStream(30); }
+    catch(e){ throw new Error('captureStream not supported: '+e.message); }
+    let rec;
+    try{ rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:9000000}); }
+    catch(e){
+      try{ rec=new MediaRecorder(stream); }
+      catch(e2){ throw new Error('MediaRecorder not supported: '+e2.message); }
+    }
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size>0) chunks.push(e.data); };
     rec.start(100);
     for(let i=0;i<seq.length;i++){
       const clip=seq[i];
@@ -1035,23 +1047,31 @@ window.startRender=async function(){
       await renderClip(clip,canvas,ctx,W,H);
     }
     setProgress(94,'Encoding…');
-    await new Promise(r=>{rec.onstop=r;rec.stop();});
+    await new Promise(r=>{rec.onstop=r; rec.stop();});
     setProgress(100,'Done!');
-    const blob=new Blob(chunks,{type:mime}), url=URL.createObjectURL(blob);
+    if(chunks.length===0) throw new Error('No video data captured — clips may still be loading. Wait a moment and try again.');
+    const actualMime=rec.mimeType||mime;
+    const blob=new Blob(chunks,{type:actualMime}), url=URL.createObjectURL(blob);
     document.getElementById('progBG').classList.remove('on');
     const vid=document.getElementById('emVid'); vid.src=url; vid.style.display='block';
     document.getElementById('emFormatWrap').style.display='none';
     document.getElementById('emSeqWrap').style.display='none';
-    document.getElementById('emDesc').textContent=`${seq.length} clips · ${_exportFmt} · rendered in browser`;
+    document.getElementById('emDesc').textContent=`${seq.length} clips · ${_exportFmt} · rendered`;
     const rb=document.getElementById('emRender');
-    rb.textContent='↓ Download'; rb.onclick=()=>{const a=document.createElement('a');a.href=url;a.download=makeFilename(type,player);a.click();};
+    rb.textContent='↓ Download';
+    rb.onclick=()=>{
+      const a=document.createElement('a'); a.href=url;
+      const ext=actualMime.includes('mp4')?'mp4':'webm';
+      a.download=makeFilename(type,player).replace(/\.(webm|mp4)$/,'.'+ext);
+      a.click();
+    };
     document.getElementById('expOverlay').classList.add('on');
   }catch(err){
     document.getElementById('progBG').classList.remove('on');
-    alert('Render failed: '+err.message+'\nUse Chrome or Edge.');
-    console.error(err);
+    console.error('Render error:',err);
+    alert('Render failed: '+err.message);
   }
-}
+};
 
 function renderClip(clip,canvas,ctx,W,H){
   return new Promise((res,rej)=>{
@@ -1302,7 +1322,20 @@ function drawQR(url,containerId,size){
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 function fmt(s){ if(!s||isNaN(s)) return '0s'; return s<60?s.toFixed(1)+'s':Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
 function vidDur(url){ return new Promise(r=>{ const v=document.createElement('video'); v.src=url; v.onloadedmetadata=()=>r(v.duration); v.onerror=()=>r(0); }); }
-function getMime(){ for(const t of['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4']) if(MediaRecorder.isTypeSupported(t)) return t; return ''; }
+function getMime(){
+  const types=[
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4;codecs=h264',
+    'video/mp4',
+  ];
+  for(const t of types) if(MediaRecorder.isTypeSupported(t)) return t;
+  // Last resort — return webm and let the browser decide
+  return 'video/webm';
+}
 function setProgress(pct,label){ document.getElementById('pbFill').style.width=pct+'%'; document.getElementById('pbPct').textContent=pct+'%'; document.getElementById('pbSub').textContent=label; }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('on'),2800); }
 </script>
