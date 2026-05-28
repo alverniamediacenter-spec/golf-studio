@@ -741,6 +741,8 @@ function setHole(h){
   document.getElementById('uzHole').textContent=h;
   refreshHoleGrid(); renderClipList(); renderHoleSummary();
 }
+window.setHole=setHole;
+
 function switchTab(name){
   ['clips','hole','exports','settings'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('on',t===name);
@@ -750,6 +752,7 @@ function switchTab(name){
   if(name==='exports') buildExpGrid();
   if(name==='settings') buildLTPanel();
 }
+window.switchTab=switchTab;
 function updatePC(){
   S.players.forEach((_,i)=>{
     const el=document.getElementById('pcc-'+i);
@@ -810,14 +813,14 @@ function makeClipCard(clip){
   return row;
 }
 
-async function cycleStars(id){
+window.cycleStars=async function(id){
   const c=S.clips.find(x=>x.id===id); if(!c) return;
   c.stars=(c.stars+1)%4;
   renderClipList();
   if(c.storagePath||c.downloadURL) await updateDoc(doc(db,'sessions',S.code,'clips',id),{stars:c.stars});
 }
 
-function editClip(id){
+window.editClip=function(id){
   const c=S.clips.find(x=>x.id===id); if(!c) return;
   const card=document.getElementById('cc-'+id); if(!card) return;
   const st=SHOT_MAP[c.shotKey]||SHOTS[0];
@@ -857,7 +860,7 @@ window.setCP=async function(id,field,val,extra,btn,e){
   updatePC(); renderHoleSummary();
 };
 
-async function removeClip(id){
+window.removeClip=async function(id){
   const c=S.clips.find(x=>x.id===id);
   S.clips=S.clips.filter(x=>x.id!==id);
   renderClipList(); refreshHoleGrid(); updatePC(); buildExpGrid();
@@ -1010,7 +1013,7 @@ window.setExportFmt=(fmt,el)=>{
   el.classList.add('sel');
 };
 
-async function startRender(){
+window.startRender=async function(){
   const {seq,type,player}=S.exportQueue;
   const fmt=FORMATS[_exportFmt]||FORMATS['16:9'];
   closeExport();
@@ -1288,7 +1291,13 @@ function drawQR(url,containerId,size){
   el.innerHTML='';
   if(_qrInstances[containerId]) try{_qrInstances[containerId].clear();}catch(e){}
   _qrInstances[containerId]=new QRCode(el,{text:url,width:size,height:size,colorDark:'#c9aa4e',colorLight:'#0b1c10',correctLevel:QRCode.CorrectLevel.M});
-  setTimeout(()=>{const img=el.querySelector('img,canvas');if(img){img.style.display='block';img.style.width=size+'px';img.style.height=size+'px';}},100);
+  // qrcode.js renders both a canvas and an img — hide the img, keep canvas only
+  setTimeout(()=>{
+    const img=el.querySelector('img');
+    if(img) img.style.display='none';
+    const canvas=el.querySelector('canvas');
+    if(canvas){ canvas.style.display='block'; canvas.style.width=size+'px'; canvas.style.height=size+'px'; }
+  },100);
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 function fmt(s){ if(!s||isNaN(s)) return '0s'; return s<60?s.toFixed(1)+'s':Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
