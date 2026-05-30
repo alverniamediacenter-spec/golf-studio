@@ -149,6 +149,7 @@ main{max-width:1200px;margin:0 auto;padding:32px 28px}
   <div class="logo">Golf Broadcast Studio<span class="logo-sub">Tournament Dashboard</span></div>
   <div class="hdr-right">
     <div id="firebaseStatus" style="font-size:.55rem;color:var(--muted);letter-spacing:.08em">Connecting…</div>
+    <a href="/courses.html" class="btn btn-ghost btn-sm" style="text-decoration:none">⛳ Courses</a>
   </div>
 </div>
 
@@ -173,9 +174,18 @@ main{max-width:1200px;margin:0 auto;padding:32px 28px}
           <button class="btn btn-ghost btn-sm" onclick="addPlayerRow()">+ Add player</button>
         </div>
       </div>
-      <div class="fg">
-        <div class="fl">Holes</div>
-        <div class="holes-toggle">
+      <div class="fg" style="grid-column:1/-1">
+        <div class="fl">Golf Course (optional)</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="ti" id="fCourse" style="flex:1;cursor:pointer">
+            <option value="">— No course selected —</option>
+          </select>
+          <a href="/courses.html" class="btn btn-ghost btn-sm" style="white-space:nowrap;text-decoration:none">Manage courses</a>
+        </div>
+        <div style="font-size:.54rem;color:var(--muted);letter-spacing:.05em">
+          Select a course to show par and yardage in overlays
+        </div>
+      </div>
           <div class="ht" id="fh9" onclick="setHoles(9)">9 holes</div>
           <div class="ht active" id="fh18" onclick="setHoles(18)">18 holes</div>
         </div>
@@ -317,10 +327,11 @@ window.createSession=async function(){
   });
   if(!players.length){toast('Add at least one player');return;}
   const tournament=document.getElementById('fTournament').value.trim()||'Round';
+  const courseId=document.getElementById('fCourse').value||null;
   const code=randCode();
 
   const sessionData={
-    code, tournament, players, holes:_holes,
+    code, tournament, players, holes:_holes, courseId,
     lt:{style:_ltStyle,fields:{..._ltFields}},
     createdAt:serverTimestamp(),
     updatedAt:serverTimestamp(),
@@ -435,6 +446,19 @@ buildPlayerRows();
 buildLTToggles();
 window.loadSessions();
 startLiveSessionUpdates();
+loadCoursesDropdown();
+
+async function loadCoursesDropdown(){
+  try{
+    const snap=await getDocs(query(collection(db,'courses'),orderBy('name','asc')));
+    const sel=document.getElementById('fCourse');
+    snap.docs.forEach(d=>{
+      const opt=document.createElement('option');
+      opt.value=d.id; opt.textContent=d.data().name+(d.data().location?' — '+d.data().location:'');
+      sel.appendChild(opt);
+    });
+  }catch(e){ console.warn('Could not load courses:',e); }
+}
 </script>
 </body>
 </html>
