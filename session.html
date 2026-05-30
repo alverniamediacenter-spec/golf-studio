@@ -771,6 +771,10 @@ function updatePC(){
 // ══════════════════════════════════════════════
 // CLIP LIST
 // ══════════════════════════════════════════════
+// Track which trim panels are open so they survive re-renders
+const _openTrims = new Set();
+
+window.renderClipList=renderClipList;
 function renderClipList(){
   const hc=S.clips.filter(c=>c.hole===S.currentHole);
   const wrap=document.getElementById('clipsWrap'), noMsg=document.getElementById('noClips'), list=document.getElementById('clipList');
@@ -784,6 +788,11 @@ function renderClipList(){
     return (ROLE_MAP[a.role]?.order??0)-(ROLE_MAP[b.role]?.order??0);
   });
   sorted.forEach(c=>list.appendChild(makeClipCard(c)));
+  // Restore any trim panels that were open before the re-render
+  _openTrims.forEach(id=>{
+    const wrap=document.getElementById('trim-'+id);
+    if(wrap) wrap.classList.add('open');
+  });
 }
 
 function makeClipCard(clip){
@@ -825,19 +834,28 @@ function makeClipCard(clip){
   const trimDur = trimEnd - (clip.trimStart||0);
   const trimDiv = document.createElement('div');
   trimDiv.className = 'trim-wrap'; trimDiv.id = 'trim-'+clip.id;
+  const clipUrl = clip.url || clip.downloadURL || '';
   trimDiv.innerHTML = `
+    <video id="trim-prev-${clip.id}" src="${clipUrl}"
+      style="width:100%;height:auto;max-height:110px;border-radius:3px;background:#000;display:block;object-fit:cover"
+      muted preload="metadata" playsinline></video>
+    <div style="font-size:.5rem;color:var(--muted);text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-top:-2px">Preview</div>
     <div class="trim-row">
       <div class="trim-lbl">In</div>
       <input class="trim-sl" type="range" id="tsin-${clip.id}"
         min="0" max="${(clip.dur||0).toFixed(2)}" step="0.1" value="${(clip.trimStart||0).toFixed(2)}"
-        data-id="${clip.id}" data-edge="start" onchange="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))" oninput="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))">
+        data-id="${clip.id}" data-edge="start" 
+        oninput="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value),false)"
+        onchange="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value),true)">
       <div class="trim-val" id="tsiv-${clip.id}">${fmt(clip.trimStart||0)}</div>
     </div>
     <div class="trim-row">
       <div class="trim-lbl">Out</div>
       <input class="trim-sl" type="range" id="tsout-${clip.id}"
         min="0" max="${(clip.dur||0).toFixed(2)}" step="0.1" value="${trimEnd.toFixed(2)}"
-        data-id="${clip.id}" data-edge="end" onchange="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))" oninput="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))">
+        data-id="${clip.id}" data-edge="end"
+        oninput="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value),false)"
+        onchange="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value),true)">
       <div class="trim-val" id="tsov-${clip.id}">${fmt(trimEnd)}</div>
     </div>
     <div class="trim-dur" id="tsdur-${clip.id}">▶ ${fmt(trimDur)}</div>`;
@@ -854,32 +872,49 @@ window.cycleStars=async function(id){
 
 window.toggleTrim=function(id){
   const wrap=document.getElementById('trim-'+id);
-  if(wrap) wrap.classList.toggle('open');
+  if(!wrap) return;
+  const isOpen=wrap.classList.toggle('open');
+  if(isOpen) _openTrims.add(id);
+  else _openTrims.delete(id);
+  // Scrub preview video to trim start when opening
+  if(isOpen){
+    const c=S.clips.find(x=>x.id===id);
+    const prev=document.getElementById('trim-prev-'+id);
+    if(prev&&c) prev.currentTime=c.trimStart||0;
+  }
 };
 
-window.updateTrim=async function(id,edge,val){
+window.updateTrim=async function(id,edge,val,saveNow=false){
   const c=S.clips.find(x=>x.id===id); if(!c) return;
   const dur=c.dur||0;
   if(edge==='start'){
-    // Don't allow IN to pass OUT
     const maxIn=(c.trimEnd??dur)-0.1;
     val=Math.min(val,maxIn);
     c.trimStart=val;
-    document.getElementById('tsin-'+id).value=val;
-    document.getElementById('tsiv-'+id).textContent=fmt(val);
+    const sl=document.getElementById('tsin-'+id);
+    if(sl) sl.value=val;
+    const lbl=document.getElementById('tsiv-'+id);
+    if(lbl) lbl.textContent=fmt(val);
+    // Scrub preview to IN point
+    const prev=document.getElementById('trim-prev-'+id);
+    if(prev) prev.currentTime=val;
   } else {
-    // Don't allow OUT to pass IN
     const minOut=(c.trimStart||0)+0.1;
     val=Math.max(val,minOut);
     c.trimEnd=val;
-    document.getElementById('tsout-'+id).value=val;
-    document.getElementById('tsov-'+id).textContent=fmt(val);
+    const sl=document.getElementById('tsout-'+id);
+    if(sl) sl.value=val;
+    const lbl=document.getElementById('tsov-'+id);
+    if(lbl) lbl.textContent=fmt(val);
+    // Scrub preview to OUT point
+    const prev=document.getElementById('trim-prev-'+id);
+    if(prev) prev.currentTime=val;
   }
   const trimDur=(c.trimEnd??dur)-(c.trimStart||0);
   const durEl=document.getElementById('tsdur-'+id);
   if(durEl) durEl.textContent='▶ '+fmt(trimDur);
-  // Save to Firestore
-  if(c.storagePath||c.downloadURL){
+  // Only save to Firestore on mouseup/change (not every pixel of drag)
+  if(saveNow && (c.storagePath||c.downloadURL)){
     await updateDoc(doc(db,'sessions',S.code,'clips',id),{
       trimStart:c.trimStart||0, trimEnd:c.trimEnd??dur
     }).catch(e=>console.warn('Trim save error:',e));
