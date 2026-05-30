@@ -256,10 +256,10 @@ function buildPlayerRows(){
     const row=document.createElement('div'); row.className='pr';
     row.innerHTML=`
       <div class="pr-num" style="color:${P_COLORS[i]}">${i+1}</div>
-      <input class="ti" placeholder="Player name" value="${p.name}"
-        oninput="_players[${i}].name=this.value" style="font-size:.7rem;padding:7px 10px">
-      <input class="ti" placeholder="School / team" value="${p.team}"
-        oninput="_players[${i}].team=this.value" style="font-size:.7rem;padding:7px 10px">
+      <input class="ti" id="pname-${i}" placeholder="Player name" value="${p.name}"
+        style="font-size:.7rem;padding:7px 10px">
+      <input class="ti" id="pteam-${i}" placeholder="School / team" value="${p.team}"
+        style="font-size:.7rem;padding:7px 10px">
       ${_players.length>1?`<button class="pr-rm" onclick="removePlayerRow(${i})">✕</button>`:'<div></div>'}`;
     wrap.appendChild(row);
   });
@@ -300,11 +300,22 @@ function buildLTToggles(){
 
 // ── CREATE SESSION ─────────────────────────────────────────────────
 window.createSession=async function(){
-  const players=_players.map((p,i)=>({
-    name:p.name.trim()||`Player ${i+1}`,
-    team:p.team.trim()||'',
-    color:P_COLORS[i]
-  })).filter((_,i)=>_players[i].name.trim()||i===0);
+  // Read player values directly from inputs — oninput may not fire reliably in module scope
+  const rows=document.getElementById('playerRows').querySelectorAll('.pr');
+  const players=[];
+  rows.forEach((row,i)=>{
+    const inputs=row.querySelectorAll('input');
+    const name=(inputs[0]?.value||'').trim();
+    const team=(inputs[1]?.value||'').trim();
+    if(name||i===0){
+      players.push({
+        name: name||`Player ${i+1}`,
+        team: team||'',
+        color: P_COLORS[i]||P_COLORS[0]
+      });
+    }
+  });
+  if(!players.length){toast('Add at least one player');return;}
   const tournament=document.getElementById('fTournament').value.trim()||'Round';
   const code=randCode();
 
