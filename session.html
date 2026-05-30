@@ -243,6 +243,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .ph-done{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;padding:14px}
 .ph-done-i{font-size:2.8rem}.ph-done-h{font-family:var(--serif);font-size:1.15rem;color:var(--gold2)}
 .ph-done-p{font-size:.6rem;color:var(--muted);line-height:1.8}
+.trim-wrap{padding:8px 12px 10px;border-top:1px solid var(--bdr);display:none;flex-direction:column;gap:6px;background:var(--s2)}
+.trim-wrap.open{display:flex}
+.trim-row{display:flex;align-items:center;gap:8px;font-size:.56rem;color:var(--muted);letter-spacing:.06em}
+.trim-lbl{width:24px;text-transform:uppercase;flex-shrink:0}
+.trim-sl{flex:1;-webkit-appearance:none;height:2px;background:rgba(255,255,255,.12);border-radius:2px;outline:none;cursor:pointer}
+.trim-sl::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid var(--bg)}
+.trim-val{width:36px;text-align:right;color:var(--gold2);font-size:.54rem;flex-shrink:0}
+.trim-dur{font-size:.54rem;color:var(--green3);text-align:right;letter-spacing:.06em}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(46px);background:var(--s2);border:1px solid rgba(201,170,78,.2);color:var(--cream);padding:8px 15px;border-radius:20px;font-size:.58rem;letter-spacing:.06em;z-index:9998;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
 .toast.on{transform:translateX(-50%) translateY(0)}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
@@ -807,9 +815,33 @@ function makeClipCard(clip){
       </div>
     </div>
     <div class="cc-actions">
-      <button class="ic-btn edit" onclick="editClip('${clip.id}')">✎</button>
-      <button class="ic-btn" onclick="removeClip('${clip.id}')">✕</button>
+      <button class="ic-btn edit" onclick="editClip('${clip.id}')" title="Edit tags">✎</button>
+      <button class="ic-btn edit" onclick="toggleTrim('${clip.id}')" title="Trim clip">✂</button>
+      <button class="ic-btn" onclick="removeClip('${clip.id}')" title="Delete">✕</button>
     </div>`;
+
+  // Trim section — appended below the main grid row
+  const trimEnd = clip.trimEnd ?? clip.dur ?? 0;
+  const trimDur = trimEnd - (clip.trimStart||0);
+  const trimDiv = document.createElement('div');
+  trimDiv.className = 'trim-wrap'; trimDiv.id = 'trim-'+clip.id;
+  trimDiv.innerHTML = `
+    <div class="trim-row">
+      <div class="trim-lbl">In</div>
+      <input class="trim-sl" type="range" id="tsin-${clip.id}"
+        min="0" max="${(clip.dur||0).toFixed(2)}" step="0.1" value="${(clip.trimStart||0).toFixed(2)}"
+        data-id="${clip.id}" data-edge="start" onchange="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))" oninput="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))">
+      <div class="trim-val" id="tsiv-${clip.id}">${fmt(clip.trimStart||0)}</div>
+    </div>
+    <div class="trim-row">
+      <div class="trim-lbl">Out</div>
+      <input class="trim-sl" type="range" id="tsout-${clip.id}"
+        min="0" max="${(clip.dur||0).toFixed(2)}" step="0.1" value="${trimEnd.toFixed(2)}"
+        data-id="${clip.id}" data-edge="end" onchange="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))" oninput="updateTrim(this.dataset.id,this.dataset.edge,parseFloat(this.value))">
+      <div class="trim-val" id="tsov-${clip.id}">${fmt(trimEnd)}</div>
+    </div>
+    <div class="trim-dur" id="tsdur-${clip.id}">▶ ${fmt(trimDur)}</div>`;
+  row.appendChild(trimDiv);
   return row;
 }
 
@@ -819,6 +851,40 @@ window.cycleStars=async function(id){
   renderClipList();
   if(c.storagePath||c.downloadURL) await updateDoc(doc(db,'sessions',S.code,'clips',id),{stars:c.stars});
 }
+
+window.toggleTrim=function(id){
+  const wrap=document.getElementById('trim-'+id);
+  if(wrap) wrap.classList.toggle('open');
+};
+
+window.updateTrim=async function(id,edge,val){
+  const c=S.clips.find(x=>x.id===id); if(!c) return;
+  const dur=c.dur||0;
+  if(edge==='start'){
+    // Don't allow IN to pass OUT
+    const maxIn=(c.trimEnd??dur)-0.1;
+    val=Math.min(val,maxIn);
+    c.trimStart=val;
+    document.getElementById('tsin-'+id).value=val;
+    document.getElementById('tsiv-'+id).textContent=fmt(val);
+  } else {
+    // Don't allow OUT to pass IN
+    const minOut=(c.trimStart||0)+0.1;
+    val=Math.max(val,minOut);
+    c.trimEnd=val;
+    document.getElementById('tsout-'+id).value=val;
+    document.getElementById('tsov-'+id).textContent=fmt(val);
+  }
+  const trimDur=(c.trimEnd??dur)-(c.trimStart||0);
+  const durEl=document.getElementById('tsdur-'+id);
+  if(durEl) durEl.textContent='▶ '+fmt(trimDur);
+  // Save to Firestore
+  if(c.storagePath||c.downloadURL){
+    await updateDoc(doc(db,'sessions',S.code,'clips',id),{
+      trimStart:c.trimStart||0, trimEnd:c.trimEnd??dur
+    }).catch(e=>console.warn('Trim save error:',e));
+  }
+};
 
 window.editClip=function(id){
   const c=S.clips.find(x=>x.id===id); if(!c) return;
@@ -1085,7 +1151,8 @@ function renderClip(clip,canvas,ctx,W,H){
         const draw=()=>{
           if(vid.paused||vid.ended||vid.currentTime>=e){vid.pause();return res();}
           const vW=vid.videoWidth||W, vH=vid.videoHeight||H;
-          const sc=Math.min(W/vW,H/vH);
+          // COVER: scale to fill the full frame, crop edges rather than letterbox
+          const sc=Math.max(W/vW,H/vH);
           const dW=vW*sc, dH=vH*sc, dx=(W-dW)/2, dy=(H-dH)/2;
           ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
           ctx.drawImage(vid,dx,dy,dW,dH);
@@ -1103,19 +1170,80 @@ function renderClip(clip,canvas,ctx,W,H){
 function drawLT(ctx,clip,st,pl,W,H){
   const f=S.lt.fields, minimal=S.lt.style==='minimal';
   const scale=Math.min(W,H)/720;
-  const fs={shot:Math.round(15*scale),player:Math.round(14*scale),team:Math.round(10*scale),hole:Math.round(11*scale),tournament:Math.round(9*scale),badge:Math.round(9*scale)};
-  const barH=Math.round((minimal?42:54)*scale), barW=minimal?W*0.6:W*0.65, alpha=minimal?0.5:0.65, lx=Math.round(14*scale);
+  const fs={shot:Math.round(15*scale),player:Math.round(14*scale),team:Math.round(10*scale),
+            combo:Math.round(12*scale),tournament:Math.round(9*scale),badge:Math.round(9*scale)};
+  const barH=Math.round((minimal?46:58)*scale), barW=minimal?W*0.65:W*0.72;
+  const alpha=minimal?0.5:0.68, lx=Math.round(14*scale);
+
+  // Main bar
   ctx.fillStyle=`rgba(0,0,0,${alpha})`; ctx.fillRect(0,H-barH,barW,barH);
+  // Color accent stripe
   ctx.fillStyle=st.color; ctx.fillRect(0,H-(barH+2),barW,2);
-  const bW=Math.round(80*scale), bH=Math.round(26*scale);
-  if(f.holeNum){ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,bW,bH);ctx.fillStyle=st.color;ctx.fillRect(0,0,bW,2);ctx.font=`${fs.hole}px "Azeret Mono"`;ctx.fillStyle='#e0d7c2';ctx.fillText('HOLE '+clip.hole,Math.round(10*scale),Math.round(17*scale));}
-  if(f.tournament&&S.tournament){ctx.font=`${fs.tournament}px "Azeret Mono"`;ctx.fillStyle='rgba(201,170,78,.7)';ctx.textAlign='center';ctx.fillText(S.tournament.toUpperCase(),W/2,Math.round(16*scale));ctx.textAlign='left';}
-  if(f.shotType){ctx.font=`bold ${fs.shot}px "Azeret Mono"`;ctx.fillStyle=st.color;ctx.fillText(`${st.icon} ${st.label.toUpperCase()}`,lx,H-Math.round(barH-16*scale));}
-  if(f.playerName&&clip.player){ctx.font=`${fs.player}px "Libre Baskerville"`;ctx.fillStyle='#f3efe4';ctx.fillText(clip.player,lx,H-Math.round(barH-34*scale));}
-  if(f.teamName&&pl?.team){ctx.font=`${fs.team}px "Azeret Mono"`;ctx.fillStyle='rgba(224,215,194,.65)';ctx.fillText(pl.team.toUpperCase(),lx,H-Math.round(barH-50*scale));}
-  if(f.role){const role=ROLE_MAP[clip.role];ctx.font=`${fs.badge}px "Azeret Mono"`;ctx.fillStyle='rgba(201,170,78,.65)';ctx.textAlign='right';ctx.fillText(role?.label?.toUpperCase()||'',barW-Math.round(12*scale),H-Math.round(10*scale));ctx.textAlign='left';}
-  if(f.stars&&clip.stars>0){ctx.font=`${Math.round(11*scale)}px serif`;ctx.fillStyle='#c9aa4e';ctx.textAlign='right';ctx.fillText(STAR_ICONS[clip.stars],barW-Math.round(12*scale),H-Math.round(26*scale));ctx.textAlign='left';}
-  if(clip.shotKey==='hole'){const g=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.72);g.addColorStop(0,'transparent');g.addColorStop(1,'rgba(201,170,78,.2)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.font=`bold ${Math.round(17*scale)}px "Azeret Mono"`;ctx.fillStyle='#c9aa4e';ctx.textAlign='right';ctx.fillText('★ HOLE OUT',W-Math.round(16*scale),H-Math.round(12*scale));ctx.textAlign='left';}
+
+  // Tournament top center
+  if(f.tournament&&S.tournament){
+    ctx.font=`${fs.tournament}px "Azeret Mono"`;
+    ctx.fillStyle='rgba(201,170,78,.7)';
+    ctx.textAlign='center';
+    ctx.fillText(S.tournament.toUpperCase(),W/2,Math.round(16*scale));
+    ctx.textAlign='left';
+  }
+
+  // Shot type · Hole N  (combined on one line)
+  if(f.shotType||f.holeNum){
+    const shotPart = f.shotType ? `${st.icon} ${st.label.toUpperCase()}` : '';
+    const holePart = f.holeNum  ? `HOLE ${clip.hole}` : '';
+    const separator = (shotPart && holePart) ? '  ·  ' : '';
+    const combined  = shotPart + separator + holePart;
+    ctx.font=`bold ${fs.combo}px "Azeret Mono"`;
+    ctx.fillStyle=st.color;
+    ctx.fillText(combined, lx, H-Math.round(barH-18*scale));
+  }
+
+  // Player name
+  if(f.playerName&&clip.player){
+    ctx.font=`${fs.player}px "Libre Baskerville"`;
+    ctx.fillStyle='#f3efe4';
+    ctx.fillText(clip.player, lx, H-Math.round(barH-36*scale));
+  }
+
+  // Team name
+  if(f.teamName&&pl?.team){
+    ctx.font=`${fs.team}px "Azeret Mono"`;
+    ctx.fillStyle='rgba(224,215,194,.65)';
+    ctx.fillText(pl.team.toUpperCase(), lx, H-Math.round(barH-52*scale));
+  }
+
+  // Role badge right
+  if(f.role){
+    const role=ROLE_MAP[clip.role];
+    ctx.font=`${fs.badge}px "Azeret Mono"`;
+    ctx.fillStyle='rgba(201,170,78,.65)';
+    ctx.textAlign='right';
+    ctx.fillText(role?.label?.toUpperCase()||'', barW-Math.round(12*scale), H-Math.round(10*scale));
+    ctx.textAlign='left';
+  }
+
+  // Stars right
+  if(f.stars&&clip.stars>0){
+    ctx.font=`${Math.round(11*scale)}px serif`;
+    ctx.fillStyle='#c9aa4e';
+    ctx.textAlign='right';
+    ctx.fillText(STAR_ICONS[clip.stars], barW-Math.round(12*scale), H-Math.round(26*scale));
+    ctx.textAlign='left';
+  }
+
+  // Hole-out gold vignette + badge
+  if(clip.shotKey==='hole'){
+    const g=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.72);
+    g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(201,170,78,.2)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.font=`bold ${Math.round(17*scale)}px "Azeret Mono"`;
+    ctx.fillStyle='#c9aa4e';
+    ctx.textAlign='right';
+    ctx.fillText('★ HOLE OUT', W-Math.round(16*scale), H-Math.round(12*scale));
+    ctx.textAlign='left';
+  }
 }
 
 function drawHeroShot(ctx,clip,pl,W,H){
