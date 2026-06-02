@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schools Database — Golf Broadcast Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05100a;--s1:#0b1c10;--s2:#112016;--s3:#18281c;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.11);
+  --gold:#c9aa4e;--gold2:#e8cb72;--green:#2d6b38;--green2:#3d8e4a;--green3:#50ae5c;
+  --cream:#e0d7c2;--muted:#66786a;--dim:#3e4e40;--white:#f3efe4;--red:#a02818;
+  --mono:'Azeret Mono',monospace;--serif:'Libre Baskerville',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;min-height:100vh}
+.hdr{display:flex;align-items:center;gap:12px;padding:13px 24px;
+  background:rgba(5,16,10,.97);border-bottom:1px solid var(--bdr);
+  backdrop-filter:blur(14px);position:sticky;top:0;z-index:50}
+.logo{font-family:var(--serif);font-size:1.2rem;font-weight:700;color:var(--gold)}
+.logo-sub{font-size:.52rem;font-family:var(--mono);color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-left:7px}
+.hdr-right{margin-left:auto;display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:3px;border:none;cursor:pointer;font-family:var(--mono);font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;font-weight:600;transition:all .18s}
+.btn-gold{background:var(--gold);color:#05100a}.btn-gold:hover{background:var(--gold2);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--bdr2);color:var(--cream)}.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+.btn-ghost{background:transparent;border:1px solid var(--bdr);color:var(--muted);padding:6px 12px}.btn-ghost:hover{border-color:var(--muted);color:var(--cream)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:var(--green2)}
+.btn-sm{padding:5px 11px;font-size:.54rem}.btn-xs{padding:3px 8px;font-size:.5rem}
+.btn-red{background:transparent;border:1px solid rgba(160,40,24,.4);color:#e08070}.btn-red:hover{border-color:var(--red);color:var(--red)}
+
+main{max-width:1200px;margin:0 auto;padding:28px 24px;display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start}
+.panel{background:var(--s1);border:1px solid var(--bdr);border-radius:5px;overflow:hidden}
+.panel-hdr{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:var(--serif);font-size:1rem;font-weight:700;color:var(--gold2)}
+.panel-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fl{font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.ti{background:var(--s2);border:1px solid var(--bdr2);color:var(--cream);padding:8px 12px;border-radius:3px;font-family:var(--mono);font-size:.72rem;outline:none;transition:border-color .2s;width:100%}
+.ti:focus{border-color:var(--gold)}.ti::placeholder{color:var(--dim)}
+.ti-row{display:flex;gap:7px}
+.ti-row .ti{flex:1}
+
+/* Search results */
+.search-results{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
+.sr-item{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--s2);border:1px solid var(--bdr);border-radius:3px;cursor:pointer;transition:all .15s}
+.sr-item:hover{border-color:var(--gold);background:rgba(201,170,78,.06)}
+.sr-logo{width:32px;height:32px;border-radius:3px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.sr-logo img{width:100%;height:100%;object-fit:contain}
+.sr-info{flex:1;min-width:0}
+.sr-name{font-size:.7rem;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-meta{font-size:.54rem;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.sr-add{font-size:.55rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0}
+
+/* School list */
+.school-list{display:flex;flex-direction:column;gap:6px}
+.school-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:3px;cursor:pointer;transition:all .15s;position:relative}
+.school-item:hover{border-color:var(--bdr2)}
+.school-item.active{border-color:rgba(201,170,78,.4);background:rgba(201,170,78,.06)}
+.si-logo{width:36px;height:36px;border-radius:3px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--bdr)}
+.si-logo img{width:100%;height:100%;object-fit:contain}
+.si-info{flex:1;min-width:0}
+.si-name{font-size:.7rem;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.si-meta{font-size:.54rem;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.si-colors{display:flex;gap:4px;flex-shrink:0}
+.si-swatch{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.15)}
+.si-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;position:absolute;right:10px}
+.school-item:hover .si-actions{opacity:1}
+
+/* School editor */
+.school-editor{display:flex;flex-direction:column;gap:14px}
+.se-preview{display:flex;align-items:center;gap:14px;padding:16px;border-radius:5px;border:1px solid var(--bdr)}
+.se-logo-big{width:80px;height:80px;border-radius:5px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--bdr2);flex-shrink:0}
+.se-logo-big img{width:100%;height:100%;object-fit:contain}
+.se-info{flex:1}
+.se-school-name{font-family:var(--serif);font-size:1.2rem;font-weight:700;color:var(--white)}
+.se-school-sub{font-size:.58rem;color:var(--muted);letter-spacing:.06em;margin-top:3px}
+.se-overlay-preview{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.se-op-lbl{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.lt-preview-bar{height:52px;border-radius:3px;display:flex;align-items:center;padding:0 12px;position:relative;overflow:hidden}
+.lt-preview-mini{border-radius:3px;padding:6px 10px;display:inline-flex;flex-direction:column;gap:2px;margin-top:5px}
+
+/* Color pickers */
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.color-field{display:flex;flex-direction:column;gap:6px}
+.color-pick-row{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--bdr2);border-radius:3px;padding:6px 10px;cursor:pointer;transition:border-color .15s}
+.color-pick-row:hover{border-color:var(--bdr3)}
+.cp-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,.15)}
+.cp-hex{font-size:.64rem;color:var(--cream);letter-spacing:.05em;font-family:var(--mono)}
+.color-input{opacity:0;width:0;height:0;position:absolute;pointer-events:none}
+
+/* Logo section */
+.logo-section{display:flex;flex-direction:column;gap:8px}
+.logo-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.logo-option{background:var(--s2);border:1px solid var(--bdr);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:6px;align-items:center;cursor:pointer;transition:all .15s;text-align:center}
+.logo-option:hover{border-color:var(--bdr2)}
+.logo-option.active{border-color:var(--gold);background:rgba(201,170,78,.08)}
+.lo-preview{width:44px;height:44px;border-radius:3px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--bdr)}
+.lo-preview img{width:100%;height:100%;object-fit:contain}
+.lo-label{font-size:.55rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.logo-option.active .lo-label{color:var(--cream)}
+
+/* Roster section */
+.roster-list{display:flex;flex-direction:column;gap:5px}
+.roster-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--bdr);border-radius:3px}
+.ri-num{font-size:.55rem;color:var(--muted);width:16px;text-align:center}
+.ri-name{flex:1;font-size:.68rem;color:var(--cream)}
+.ri-year{font-size:.55rem;color:var(--muted);letter-spacing:.06em}
+
+/* Spinner / empty */
+.spinner{width:24px;height:24px;border:2px solid var(--bdr2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:20px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:24px;font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.status-msg{font-size:.6rem;letter-spacing:.07em;padding:8px 10px;border-radius:3px;text-align:center}
+.status-msg.ok{background:rgba(50,174,92,.1);color:var(--green3);border:1px solid rgba(50,174,92,.2)}
+.status-msg.err{background:rgba(160,40,24,.1);color:#e08070;border:1px solid rgba(160,40,24,.2)}
+.status-msg.info{background:rgba(201,170,78,.08);color:var(--gold2);border:1px solid rgba(201,170,78,.2)}
+.loading-bar{height:2px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-top:-12px}
+.loading-fill{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width .3s}
+
+/* Toast */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(46px);background:var(--s2);border:1px solid rgba(201,170,78,.2);color:var(--cream);padding:8px 14px;border-radius:20px;font-size:.6rem;letter-spacing:.06em;z-index:9998;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.toast.on{transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="logo">Golf Studio<span class="logo-sub">Schools Database</span></div>
+  <div class="hdr-right">
+    <a href="/courses.html" class="btn btn-ghost btn-sm" style="text-decoration:none">⛳ Courses</a>
+    <a href="/" class="btn btn-ghost btn-sm" style="text-decoration:none">← Dashboard</a>
+  </div>
+</div>
+
+<main>
+  <!-- Left panel: search + school list -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+
+    <!-- Search Clippd -->
+    <div class="panel">
+      <div class="panel-hdr"><div class="panel-title">Find a School</div></div>
+      <div class="panel-body">
+        <div style="font-size:.6rem;color:var(--muted);line-height:1.75">
+          Search NCAA golf teams from Clippd Scoreboard. Select one to import the logo and roster automatically.
+        </div>
+        <div class="fg">
+          <div class="fl">Search by school name</div>
+          <div class="ti-row">
+            <input class="ti" id="searchInput" placeholder="e.g. Villanova, Duke, Stanford…"
+              style="font-size:.72rem" oninput="onSearchInput(this.value)">
+            <div style="display:flex;gap:5px">
+              <button class="btn btn-outline btn-sm" onclick="searchMen()">Men</button>
+              <button class="btn btn-outline btn-sm" onclick="searchWomen()">Women</button>
+            </div>
+          </div>
+          <div class="loading-bar"><div class="loading-fill" id="searchLoading"></div></div>
+        </div>
+        <div id="searchResults" style="display:none">
+          <div class="fl" style="margin-bottom:7px">Results — click to add</div>
+          <div class="search-results" id="searchResultsList"></div>
+        </div>
+        <div class="status-msg info" id="searchStatus" style="display:none">—</div>
+      </div>
+    </div>
+
+    <!-- Saved schools list -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Saved Schools</div>
+        <div id="schoolCount" style="font-size:.56rem;color:var(--muted)">—</div>
+      </div>
+      <div class="panel-body" style="padding:10px">
+        <div id="schoolList"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel: school editor -->
+  <div>
+    <div class="panel" id="editorPanel" style="display:none">
+      <div class="panel-hdr">
+        <div>
+          <div class="panel-title" id="editorName">—</div>
+          <div style="font-size:.56rem;color:var(--muted);margin-top:2px" id="editorMeta">—</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-gold btn-sm" onclick="saveSchool()">Save ✓</button>
+          <button class="btn btn-red btn-xs" onclick="deleteSchool()">Delete</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="school-editor" id="schoolEditor"></div>
+      </div>
+    </div>
+    <div class="panel" id="emptyPanel">
+      <div class="empty">← Search for a school or select one from the list</div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, getDocs,
+         deleteDoc, serverTimestamp, query, orderBy
+       }                    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// !! PASTE YOUR FIREBASE CONFIG HERE !!
+const firebaseConfig = {
+  apiKey: "AIzaSyDiRzPk409QDK1q1SJ273uvA8co_Yin0bM",
+  authDomain: "golf-highlight-studio.firebaseapp.com",
+  projectId: "golf-highlight-studio",
+  storageBucket: "golf-highlight-studio.firebasestorage.app",
+  messagingSenderId: "180496097081",
+  appId: "1:180496097081:web:6138fd176c777f41b212e8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── STATE ─────────────────────────────────────────────────────────
+let _schools   = [];       // saved in Firestore
+let _active    = null;     // currently editing
+let _searchTimer = null;
+let _searchGender = 'Men';
+let _toastT;
+
+// ── INIT ──────────────────────────────────────────────────────────
+loadSchools();
+
+// ── SEARCH ────────────────────────────────────────────────────────
+window.searchMen    = ()=>{ _searchGender='Men';    triggerSearch(); };
+window.searchWomen  = ()=>{ _searchGender='Women';  triggerSearch(); };
+window.onSearchInput= (v)=>{ clearTimeout(_searchTimer); if(v.length>2) _searchTimer=setTimeout(triggerSearch,500); };
+
+function triggerSearch(){
+  const q=document.getElementById('searchInput').value.trim();
+  if(q.length<2) return;
+  searchClippd(q, _searchGender);
+}
+
+async function searchClippd(query, gender){
+  setSearchLoading(true);
+  setStatus('info',`Searching for "${query}" (${gender})…`);
+  document.getElementById('searchResults').style.display='none';
+
+  // Clippd uses Next.js — we fetch their search page and parse team links
+  // Their search URL pattern based on inspecting the site
+  const searchUrl=`https://scoreboard.clippd.com/teams/search?name=${encodeURIComponent(query)}&gender=${encodeURIComponent(gender)}`;
+
+  try{
+    const resp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`);
+    if(!resp.ok) throw new Error('Network error');
+    const data = await resp.json();
+    const html = data.contents;
+    parseSearchResults(html, query);
+  }catch(e){
+    // Fallback: try direct fetch (works if CORS allows it)
+    try{
+      const resp2=await fetch(searchUrl);
+      const html=await resp2.text();
+      parseSearchResults(html, query);
+    }catch(e2){
+      setStatus('err','Could not reach Clippd. Try entering details manually below.');
+      setSearchLoading(false);
+    }
+  }
+}
+
+function parseSearchResults(html, query){
+  setSearchLoading(false);
+  // Extract team links from HTML — pattern: /teams/NUMBER
+  const teamLinks=[...html.matchAll(/href="\/teams\/(\d+)"[^>]*>([^<]*)</g)];
+  // Also look for cloudinary logo URLs
+  const logos={};
+  const logoMatches=[...html.matchAll(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?]+)/g)];
+  logoMatches.forEach(m=>{ const url='https://'+m[0].split('?')[0]; });
+
+  // Parse team sections — look for team name + id combinations
+  const sections=[...html.matchAll(/href="\/teams\/(\d+)"[\s\S]{0,500}?([A-Z][a-z][\w\s]+(?:University|College|State|Tech|A&M|Institute)[^\n"<]{0,40})/g)];
+
+  // Simpler: extract all /teams/ID hrefs and nearby text
+  const found=[];
+  const idPattern=/\/teams\/(\d+)/g;
+  let match;
+  const seenIds=new Set();
+  while((match=idPattern.exec(html))!==null){
+    const id=match[1];
+    if(seenIds.has(id)) continue;
+    seenIds.add(id);
+    // Get surrounding text for name
+    const ctx=html.slice(Math.max(0,match.index-20),match.index+200);
+    // Look for logo near this team
+    const logoM=ctx.match(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?&\s]+)/);
+    const logoUrl=logoM?'https://clippd-prod.mo.cloudinary.net/scoreboard/'+logoM[1].split('?')[0]:null;
+    // Look for team name in heading tags
+    const nameM=ctx.match(/SCOREBOARD - (.+?)(?:\s*\(|\s*<)/);
+    const name=nameM?nameM[1].trim():null;
+    if(name||logoUrl) found.push({id,name,logoUrl});
+  }
+
+  if(!found.length){
+    setStatus('err','No results found. Try a different spelling or add the school manually.');
+    return;
+  }
+
+  const list=document.getElementById('searchResultsList');
+  list.innerHTML='';
+  found.slice(0,20).forEach(t=>{
+    const d=document.createElement('div'); d.className='sr-item';
+    d.innerHTML=`
+      <div class="sr-logo">
+        ${t.logoUrl?`<img src="${t.logoUrl}" alt="" crossorigin="anonymous">`:'<span style="font-size:.8rem;color:var(--dim)">?</span>'}
+      </div>
+      <div class="sr-info">
+        <div class="sr-name">${t.name||'Team #'+t.id}</div>
+        <div class="sr-meta">Clippd ID: ${t.id}</div>
+      </div>
+      <div class="sr-add">+ Add</div>`;
+    d.onclick=()=>importFromClippd(t);
+    list.appendChild(d);
+  });
+
+  document.getElementById('searchResults').style.display='';
+  setStatus('info',`${found.length} result${found.length!==1?'s':''} found`);
+}
+
+async function importFromClippd(team){
+  setStatus('info','Fetching school details…');
+  setSearchLoading(true);
+
+  // Fetch the team page to get full details
+  let logoUrl=team.logoUrl, name=team.name, conference='', division='', coach='', roster=[];
+  try{
+    const resp=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://scoreboard.clippd.com/teams/'+team.id)}`);
+    const data=await resp.json();
+    const html=data.contents;
+
+    // Extract logo
+    const logoM=html.match(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?&\s]+)/);
+    if(logoM) logoUrl='https://clippd-prod.mo.cloudinary.net/scoreboard/'+logoM[1].split('?')[0];
+
+    // Extract school name
+    const nameM=html.match(/SCOREBOARD - (.+?)(?:\s*\(|\s*<)/);
+    if(nameM) name=nameM[1].trim();
+
+    // Extract conference
+    const confM=html.match(/Conference[:\s]+([^\n<]+)/);
+    if(confM) conference=confM[1].trim();
+
+    // Extract division
+    const divM=html.match(/Division[:\s]+(NCAA[^\n<]+)/);
+    if(divM) division=divM[1].trim();
+
+    // Extract head coach
+    const coachM=html.match(/Head Coach[:\s]+([^\n<]+)/);
+    if(coachM) coach=coachM[1].trim();
+
+    // Extract roster from roster page
+    try{
+      const rResp=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://scoreboard.clippd.com/teams/'+team.id+'/roster')}`);
+      const rData=await rResp.json();
+      const rHtml=rData.contents;
+      // Parse player names — look for common patterns
+      const playerMatches=[...rHtml.matchAll(/\/players\/\d+"[^>]*>([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/g)];
+      roster=[...new Set(playerMatches.map(m=>m[1].trim()))].slice(0,8);
+    }catch(e){}
+
+  }catch(e){
+    console.warn('Could not fetch details, using search result data');
+  }
+
+  setSearchLoading(false);
+
+  // Open editor with imported data — user sets colors
+  const school={
+    id: 'clippd-'+team.id,
+    clippd_id: team.id,
+    name: name||team.name||'Unknown School',
+    conference, division, coach, roster,
+    logoUrl, logoUrl_clippd: logoUrl,
+    primaryColor: '#1a3a6b',
+    secondaryColor: '#c9aa4e',
+    domain: null,
+  };
+  openEditor(school, true);
+  setStatus('ok','School imported — set colors then click Save');
+}
+
+// ── LOAD SAVED SCHOOLS ────────────────────────────────────────────
+async function loadSchools(){
+  try{
+    const snap=await getDocs(query(collection(db,'schools'),orderBy('name','asc')));
+    _schools=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderSchoolList();
+  }catch(e){
+    document.getElementById('schoolList').innerHTML=`<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
+function renderSchoolList(){
+  const wrap=document.getElementById('schoolList');
+  document.getElementById('schoolCount').textContent=_schools.length+' school'+(_schools.length!==1?'s':'');
+  if(!_schools.length){wrap.innerHTML='<div class="empty">No schools yet — search above</div>';return;}
+  wrap.innerHTML='';
+  _schools.forEach(s=>{
+    const d=document.createElement('div');
+    d.className='school-item'+(_active?.id===s.id?' active':'');
+    d.id='si-'+s.id;
+    d.innerHTML=`
+      <div class="si-logo">
+        ${s.logoUrl?`<img src="${s.logoUrl}" alt="" crossorigin="anonymous">`:'<span style="font-size:.9rem">🎓</span>'}
+      </div>
+      <div class="si-info">
+        <div class="si-name">${s.name}</div>
+        <div class="si-meta">${s.conference||s.division||'—'}</div>
+      </div>
+      <div class="si-colors">
+        <div class="si-swatch" style="background:${s.primaryColor||'#333'}"></div>
+        <div class="si-swatch" style="background:${s.secondaryColor||'#999'}"></div>
+      </div>
+      <div class="si-actions">
+        <button class="btn btn-xs btn-red" onclick="confirmDelete('${s.id}',event)">✕</button>
+      </div>`;
+    d.onclick=(e)=>{ if(e.target.classList.contains('btn-red')) return; openEditor(s,false); };
+    wrap.appendChild(d);
+  });
+}
+
+// ── EDITOR ────────────────────────────────────────────────────────
+function openEditor(school, isNew){
+  _active={...school};
+  document.getElementById('editorPanel').style.display='';
+  document.getElementById('emptyPanel').style.display='none';
+  document.getElementById('editorName').textContent=school.name;
+  document.getElementById('editorMeta').textContent=[school.division,school.conference,school.coach?'Coach: '+school.coach:''].filter(Boolean).join(' · ')||'—';
+  renderEditor(school);
+  renderSchoolList();
+}
+
+function renderEditor(s){
+  const pri=s.primaryColor||'#1a3a6b';
+  const sec=s.secondaryColor||'#c9aa4e';
+  const editor=document.getElementById('schoolEditor');
+  editor.innerHTML=`
+    <!-- Live overlay preview -->
+    <div>
+      <div class="se-op-lbl">Overlay preview</div>
+      <div class="lt-preview-bar" id="broadcastPreview" style="background:${pri}">
+        <div style="flex:1">
+          <div style="font-size:10px;color:${sec};font-weight:700;letter-spacing:.1em;font-family:'Azeret Mono',monospace">⛳ TEE SHOT · HOLE 1</div>
+          <div style="font-size:15px;color:${sec};font-weight:700;font-family:'Libre Baskerville',serif;margin-top:2px">${s.name.split(' ')[0].toUpperCase()}</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.6);font-family:'Azeret Mono',monospace;margin-top:1px">${s.name.toUpperCase()}</div>
+        </div>
+        ${s.logoUrl?`<img src="${s.logoUrl}" style="width:44px;height:44px;object-fit:contain;opacity:.9" crossorigin="anonymous">`:''}
+        <div style="margin-left:8px;text-align:right">
+          <div style="font-size:14px;color:${sec};font-weight:700;font-family:'Azeret Mono',monospace">400 YDS</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);font-family:'Azeret Mono',monospace">PAR 4</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;justify-content:flex-end">
+        <div style="background:${pri};border-radius:3px;padding:8px 12px;display:inline-flex;flex-direction:column;gap:3px;min-width:200px">
+          <div style="font-size:8px;color:rgba(255,255,255,.55);letter-spacing:.1em;text-align:center;font-family:'Azeret Mono',monospace">TOURNAMENT NAME</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+            ${s.logoUrl?`<img src="${s.logoUrl}" style="width:28px;height:28px;object-fit:contain" crossorigin="anonymous">`:''}
+            <div style="font-size:14px;color:${sec};font-weight:700;font-family:'Libre Baskerville',serif">${s.name.split(' ')[0].toUpperCase()}</div>
+            <div style="margin-left:auto;background:#c0392b;padding:2px 7px;border-radius:2px;font-size:11px;color:#fff;font-family:'Azeret Mono',monospace;font-weight:700">1</div>
+          </div>
+          <div style="background:${sec};padding:3px 8px;display:flex;justify-content:space-between;border-radius:2px">
+            <span style="font-size:8px;color:rgba(0,0,0,.75);font-family:'Azeret Mono',monospace;font-weight:700">${s.name.split(' ')[0].toUpperCase()}</span>
+            <span style="font-size:8px;color:rgba(0,0,0,.75);font-family:'Azeret Mono',monospace;font-weight:700">400 YDS</span>
+            <span style="font-size:8px;color:rgba(0,0,0,.75);font-family:'Azeret Mono',monospace;font-weight:700">PAR 4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Name & details -->
+    <div class="fg"><div class="fl">School name</div>
+      <input class="ti" id="eName" value="${s.name||''}" style="font-size:.72rem;padding:8px 11px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><div class="fl">Conference</div>
+        <input class="ti" id="eConf" value="${s.conference||''}" style="font-size:.7rem;padding:7px 10px" placeholder="e.g. Big East"></div>
+      <div class="fg"><div class="fl">Division</div>
+        <input class="ti" id="eDiv" value="${s.division||''}" style="font-size:.7rem;padding:7px 10px" placeholder="e.g. NCAA Division I"></div>
+    </div>
+
+    <!-- Colors -->
+    <div>
+      <div class="fl" style="margin-bottom:8px">School colors</div>
+      <div class="color-grid">
+        <div class="color-field">
+          <div class="fl">Primary</div>
+          <div class="color-pick-row" onclick="document.getElementById('ePri').click()">
+            <div class="cp-dot" id="priDot" style="background:${pri}"></div>
+            <div class="cp-hex" id="priHex">${pri}</div>
+            <input type="color" class="color-input" id="ePri" value="${pri}" oninput="onEditorColor('primary',this.value)">
+          </div>
+        </div>
+        <div class="color-field">
+          <div class="fl">Secondary</div>
+          <div class="color-pick-row" onclick="document.getElementById('eSec').click()">
+            <div class="cp-dot" id="secDot" style="background:${sec}"></div>
+            <div class="cp-hex" id="secHex">${sec}</div>
+            <input type="color" class="color-input" id="eSec" value="${sec}" oninput="onEditorColor('secondary',this.value)">
+          </div>
+        </div>
+      </div>
+      <div style="font-size:.55rem;color:var(--muted);margin-top:7px;line-height:1.65">
+        💡 Tip: search "[school name] colors hex" to find official school colors
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div>
+      <div class="fl" style="margin-bottom:8px">Logo</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:60px;height:60px;border-radius:4px;background:var(--bg);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;overflow:hidden">
+          ${s.logoUrl?`<img src="${s.logoUrl}" id="logoImg" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous">`:'<span id="logoImg" style="font-size:1.2rem;color:var(--dim)">🎓</span>'}
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <div class="fg"><div class="fl">Logo URL</div>
+            <input class="ti" id="eLogoUrl" value="${s.logoUrl||''}" style="font-size:.65rem;padding:7px 10px" placeholder="https://...">
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" onclick="fetchClearbitLogo()">Try Clearbit</button>
+            <button class="btn btn-outline btn-sm" onclick="previewLogoUrl()">Preview URL</button>
+          </div>
+        </div>
+      </div>
+      <div class="fg"><div class="fl">School domain (for Clearbit)</div>
+        <div class="ti-row">
+          <input class="ti" id="eDomain" value="${s.domain||''}" placeholder="e.g. villanova.edu" style="font-size:.7rem;padding:7px 10px">
+          <button class="btn btn-green btn-sm" onclick="fetchClearbitLogo()">Fetch</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roster -->
+    ${s.roster?.length?`
+    <div>
+      <div class="fl" style="margin-bottom:8px">Imported Roster (${s.roster.length} players)</div>
+      <div class="roster-list">
+        ${s.roster.map((r,i)=>`<div class="roster-item"><div class="ri-num">${i+1}</div><div class="ri-name">${r}</div></div>`).join('')}
+      </div>
+      <div style="font-size:.54rem;color:var(--muted);margin-top:6px;letter-spacing:.05em">
+        Roster auto-populates player names when creating a session for this school.
+      </div>
+    </div>`:
+    `<div style="font-size:.58rem;color:var(--muted);letter-spacing:.06em">No roster imported. Search will attempt to fetch roster from Clippd automatically.</div>`}`;
+}
+
+window.onEditorColor=function(which, val){
+  if(!_active) return;
+  if(which==='primary'){
+    _active.primaryColor=val;
+    document.getElementById('priDot').style.background=val;
+    document.getElementById('priHex').textContent=val;
+  } else {
+    _active.secondaryColor=val;
+    document.getElementById('secDot').style.background=val;
+    document.getElementById('secHex').textContent=val;
+  }
+  // Live update preview
+  updatePreview();
+};
+
+function updatePreview(){
+  const prev=document.getElementById('broadcastPreview');
+  if(!prev||!_active) return;
+  const pri=_active.primaryColor||'#1a3a6b';
+  const sec=_active.secondaryColor||'#c9aa4e';
+  prev.style.background=pri;
+  prev.querySelectorAll('[data-sec]').forEach(el=>el.style.color=sec);
+}
+
+window.fetchClearbitLogo=function(){
+  const domain=document.getElementById('eDomain')?.value?.trim();
+  if(!domain){toast('Enter a domain first');return;}
+  const url=`https://logo.clearbit.com/${domain}`;
+  const img=new Image(); img.crossOrigin='anonymous';
+  img.onload=()=>{
+    if(_active) { _active.logoUrl=url; _active.domain=domain; }
+    document.getElementById('eLogoUrl').value=url;
+    const holder=document.getElementById('logoImg');
+    if(holder.tagName==='IMG') holder.src=url;
+    else { holder.outerHTML=`<img id="logoImg" src="${url}" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous">`; }
+    toast('Logo loaded from Clearbit ✓');
+  };
+  img.onerror=()=>toast('No logo found for '+domain);
+  img.src=url;
+};
+
+window.previewLogoUrl=function(){
+  const url=document.getElementById('eLogoUrl')?.value?.trim();
+  if(!url){toast('Enter a logo URL first');return;}
+  const holder=document.getElementById('logoImg');
+  if(_active) _active.logoUrl=url;
+  if(holder.tagName==='IMG') holder.src=url;
+  else holder.outerHTML=`<img id="logoImg" src="${url}" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous">`;
+};
+
+// ── SAVE ──────────────────────────────────────────────────────────
+window.saveSchool=async function(){
+  if(!_active) return;
+  _active.name   = document.getElementById('eName')?.value?.trim()||_active.name;
+  _active.conference=document.getElementById('eConf')?.value?.trim()||'';
+  _active.division  =document.getElementById('eDiv')?.value?.trim()||'';
+  _active.domain    =document.getElementById('eDomain')?.value?.trim()||null;
+  _active.logoUrl   =document.getElementById('eLogoUrl')?.value?.trim()||_active.logoUrl||null;
+  _active.primaryColor  =document.getElementById('ePri')?.value||_active.primaryColor;
+  _active.secondaryColor=document.getElementById('eSec')?.value||_active.secondaryColor;
+
+  try{
+    await setDoc(doc(db,'schools',_active.id),{..._active, updatedAt:serverTimestamp()});
+    const idx=_schools.findIndex(s=>s.id===_active.id);
+    if(idx>=0) _schools[idx]={..._active}; else _schools.push({..._active});
+    _schools.sort((a,b)=>a.name.localeCompare(b.name));
+    renderSchoolList();
+    toast('School saved ✓');
+  }catch(e){ toast('Save failed: '+e.message); console.error(e); }
+};
+
+// ── DELETE ────────────────────────────────────────────────────────
+window.deleteSchool=async function(){
+  if(!_active||!confirm(`Delete "${_active.name}"?`)) return;
+  await confirmDelete(_active.id);
+};
+window.confirmDelete=async function(id,e){
+  if(e) e.stopPropagation();
+  if(!confirm('Delete this school?')) return;
+  try{
+    await deleteDoc(doc(db,'schools',id));
+    _schools=_schools.filter(s=>s.id!==id);
+    if(_active?.id===id){
+      _active=null;
+      document.getElementById('editorPanel').style.display='none';
+      document.getElementById('emptyPanel').style.display='';
+    }
+    renderSchoolList();
+    toast('School deleted');
+  }catch(e){ toast('Delete failed: '+e.message); }
+};
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function setSearchLoading(on){
+  document.getElementById('searchLoading').style.width=on?'100%':'0';
+}
+function setStatus(type,msg){
+  const el=document.getElementById('searchStatus');
+  el.style.display='';
+  el.className='status-msg '+type;
+  el.textContent=msg;
+}
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('on'),2800);
+}
+</script>
+</body>
+</html>
