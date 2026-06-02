@@ -161,8 +161,24 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;display:grid;grid-template
           <div class="search-results" id="searchResultsList"></div>
         </div>
         <div class="status-msg info" id="searchStatus" style="display:none">—</div>
-      </div>
-    </div>
+
+        <!-- Manual URL fallback — shown when search fails -->
+        <div id="manualUrlSection" style="margin-top:4px">
+          <div style="height:1px;background:var(--bdr);margin:4px 0 12px"></div>
+          <div class="fg">
+            <div class="fl">Or paste Clippd team URL / ID directly</div>
+            <div style="display:flex;gap:7px">
+              <input class="ti" id="clippdUrlInput"
+                placeholder="e.g. scoreboard.clippd.com/teams/3816 or just 3816"
+                style="font-size:.68rem;flex:1">
+              <button class="btn btn-green btn-sm" onclick="importFromUrl()">Import</button>
+            </div>
+            <div style="font-size:.54rem;color:var(--muted);line-height:1.7">
+              Go to <strong style="color:var(--cream)">scoreboard.clippd.com/teams/search</strong>,
+              find the school, copy the URL from your browser, and paste it here.
+            </div>
+          </div>
+        </div>
 
     <!-- Saved schools list -->
     <div class="panel">
@@ -231,6 +247,25 @@ let _toastT;
 loadSchools();
 
 // ── SEARCH ────────────────────────────────────────────────────────
+// CORS proxies to try in order
+const PROXIES=[
+  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url=>`https://thingproxy.freeboard.io/fetch/${url}`,
+];
+
+async function fetchViaProxy(url){
+  for(const makeProxy of PROXIES){
+    try{
+      const resp=await fetch(makeProxy(url),{signal:AbortSignal.timeout(8000)});
+      if(!resp.ok) continue;
+      const text=await resp.text();
+      if(text&&text.length>200) return text;
+    }catch(e){ continue; }
+  }
+  throw new Error('All proxies failed');
+}
+
 window.searchMen    = ()=>{ _searchGender='Men';    triggerSearch(); };
 window.searchWomen  = ()=>{ _searchGender='Women';  triggerSearch(); };
 window.onSearchInput= (v)=>{ clearTimeout(_searchTimer); if(v.length>2) _searchTimer=setTimeout(triggerSearch,500); };
@@ -246,69 +281,48 @@ async function searchClippd(query, gender){
   setStatus('info',`Searching for "${query}" (${gender})…`);
   document.getElementById('searchResults').style.display='none';
 
-  // Clippd uses Next.js — we fetch their search page and parse team links
-  // Their search URL pattern based on inspecting the site
   const searchUrl=`https://scoreboard.clippd.com/teams/search?name=${encodeURIComponent(query)}&gender=${encodeURIComponent(gender)}`;
 
   try{
-    const resp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`);
-    if(!resp.ok) throw new Error('Network error');
-    const data = await resp.json();
-    const html = data.contents;
+    const html=await fetchViaProxy(searchUrl);
     parseSearchResults(html, query);
   }catch(e){
-    // Fallback: try direct fetch (works if CORS allows it)
-    try{
-      const resp2=await fetch(searchUrl);
-      const html=await resp2.text();
-      parseSearchResults(html, query);
-    }catch(e2){
-      setStatus('err','Could not reach Clippd. Try entering details manually below.');
-      setSearchLoading(false);
-    }
+    setSearchLoading(false);
+    setStatus('err','Could not reach Clippd. Paste a Clippd team URL below to import directly, or add the school manually.');
+    document.getElementById('manualUrlSection').style.display='';
   }
 }
 
 function parseSearchResults(html, query){
   setSearchLoading(false);
-  // Extract team links from HTML — pattern: /teams/NUMBER
-  const teamLinks=[...html.matchAll(/href="\/teams\/(\d+)"[^>]*>([^<]*)</g)];
-  // Also look for cloudinary logo URLs
-  const logos={};
-  const logoMatches=[...html.matchAll(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?]+)/g)];
-  logoMatches.forEach(m=>{ const url='https://'+m[0].split('?')[0]; });
-
-  // Parse team sections — look for team name + id combinations
-  const sections=[...html.matchAll(/href="\/teams\/(\d+)"[\s\S]{0,500}?([A-Z][a-z][\w\s]+(?:University|College|State|Tech|A&M|Institute)[^\n"<]{0,40})/g)];
-
-  // Simpler: extract all /teams/ID hrefs and nearby text
   const found=[];
   const idPattern=/\/teams\/(\d+)/g;
   let match;
   const seenIds=new Set();
   while((match=idPattern.exec(html))!==null){
     const id=match[1];
-    if(seenIds.has(id)) continue;
+    if(seenIds.has(id)||id==='search') continue;
     seenIds.add(id);
-    // Get surrounding text for name
-    const ctx=html.slice(Math.max(0,match.index-20),match.index+200);
-    // Look for logo near this team
-    const logoM=ctx.match(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?&\s]+)/);
-    const logoUrl=logoM?'https://clippd-prod.mo.cloudinary.net/scoreboard/'+logoM[1].split('?')[0]:null;
-    // Look for team name in heading tags
-    const nameM=ctx.match(/SCOREBOARD - (.+?)(?:\s*\(|\s*<)/);
-    const name=nameM?nameM[1].trim():null;
-    if(name||logoUrl) found.push({id,name,logoUrl});
+    const ctx=html.slice(Math.max(0,match.index-50),match.index+400);
+    const logoM=ctx.match(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?&\s\\]+)/);
+    const logoUrl=logoM?'https://clippd-prod.mo.cloudinary.net/scoreboard/'+logoM[1]:null;
+    const nameM=ctx.match(/SCOREBOARD - (.+?)(?:\s*\(|\s*<|\\n)/);
+    const altNameM=ctx.match(/"name"\s*:\s*"([^"]+)"/);
+    const name=(nameM?nameM[1]:altNameM?altNameM[1]:null)?.trim();
+    if((name&&name.toLowerCase().includes(query.toLowerCase()))||logoUrl){
+      found.push({id,name,logoUrl});
+    }
   }
 
   if(!found.length){
-    setStatus('err','No results found. Try a different spelling or add the school manually.');
+    setStatus('err','No results found. Try a different spelling, or paste a Clippd team URL below.');
+    document.getElementById('manualUrlSection').style.display='';
     return;
   }
 
   const list=document.getElementById('searchResultsList');
   list.innerHTML='';
-  found.slice(0,20).forEach(t=>{
+  found.slice(0,15).forEach(t=>{
     const d=document.createElement('div'); d.className='sr-item';
     d.innerHTML=`
       <div class="sr-logo">
@@ -316,7 +330,7 @@ function parseSearchResults(html, query){
       </div>
       <div class="sr-info">
         <div class="sr-name">${t.name||'Team #'+t.id}</div>
-        <div class="sr-meta">Clippd ID: ${t.id}</div>
+        <div class="sr-meta">Clippd ID: ${t.id} · scoreboard.clippd.com/teams/${t.id}</div>
       </div>
       <div class="sr-add">+ Add</div>`;
     d.onclick=()=>importFromClippd(t);
@@ -324,70 +338,59 @@ function parseSearchResults(html, query){
   });
 
   document.getElementById('searchResults').style.display='';
-  setStatus('info',`${found.length} result${found.length!==1?'s':''} found`);
+  setStatus('info',`${found.length} result${found.length!==1?'s':''} found — click to import`);
 }
 
 async function importFromClippd(team){
   setStatus('info','Fetching school details…');
   setSearchLoading(true);
 
-  // Fetch the team page to get full details
   let logoUrl=team.logoUrl, name=team.name, conference='', division='', coach='', roster=[];
   try{
-    const resp=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://scoreboard.clippd.com/teams/'+team.id)}`);
-    const data=await resp.json();
-    const html=data.contents;
-
-    // Extract logo
-    const logoM=html.match(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?&\s]+)/);
-    if(logoM) logoUrl='https://clippd-prod.mo.cloudinary.net/scoreboard/'+logoM[1].split('?')[0];
-
-    // Extract school name
+    const html=await fetchViaProxy('https://scoreboard.clippd.com/teams/'+team.id);
+    const logoM=html.match(/clippd-prod\.mo\.cloudinary\.net\/scoreboard\/([^"?&\s\\]+)/);
+    if(logoM) logoUrl='https://clippd-prod.mo.cloudinary.net/scoreboard/'+logoM[1];
     const nameM=html.match(/SCOREBOARD - (.+?)(?:\s*\(|\s*<)/);
     if(nameM) name=nameM[1].trim();
-
-    // Extract conference
-    const confM=html.match(/Conference[:\s]+([^\n<]+)/);
+    const confM=html.match(/Conference[:\s"]+([^"<\n\\]{3,50})/);
     if(confM) conference=confM[1].trim();
-
-    // Extract division
-    const divM=html.match(/Division[:\s]+(NCAA[^\n<]+)/);
+    const divM=html.match(/Division[:\s"]+(NCAA[^"<\n\\]{3,50})/);
     if(divM) division=divM[1].trim();
-
-    // Extract head coach
-    const coachM=html.match(/Head Coach[:\s]+([^\n<]+)/);
+    const coachM=html.match(/Head Coach[:\s"]+([^"<\n\\]{3,50})/);
     if(coachM) coach=coachM[1].trim();
-
-    // Extract roster from roster page
+    // Roster
     try{
-      const rResp=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://scoreboard.clippd.com/teams/'+team.id+'/roster')}`);
-      const rData=await rResp.json();
-      const rHtml=rData.contents;
-      // Parse player names — look for common patterns
-      const playerMatches=[...rHtml.matchAll(/\/players\/\d+"[^>]*>([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/g)];
-      roster=[...new Set(playerMatches.map(m=>m[1].trim()))].slice(0,8);
+      const rHtml=await fetchViaProxy('https://scoreboard.clippd.com/teams/'+team.id+'/roster');
+      const playerMatches=[...rHtml.matchAll(/\/players\/\d+"[^>]*>\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/g)];
+      roster=[...new Set(playerMatches.map(m=>m[1].trim()))].slice(0,10);
     }catch(e){}
-
   }catch(e){
-    console.warn('Could not fetch details, using search result data');
+    console.warn('Could not fetch details via proxy, using search data');
   }
 
   setSearchLoading(false);
-
-  // Open editor with imported data — user sets colors
   const school={
-    id: 'clippd-'+team.id,
-    clippd_id: team.id,
-    name: name||team.name||'Unknown School',
+    id:'clippd-'+team.id, clippd_id:team.id,
+    name:name||team.name||'Unknown School',
     conference, division, coach, roster,
-    logoUrl, logoUrl_clippd: logoUrl,
-    primaryColor: '#1a3a6b',
-    secondaryColor: '#c9aa4e',
-    domain: null,
+    logoUrl, logoUrl_clippd:logoUrl,
+    primaryColor:'#1a3a6b', secondaryColor:'#c9aa4e', domain:null,
   };
   openEditor(school, true);
   setStatus('ok','School imported — set colors then click Save');
 }
+
+// ── MANUAL URL IMPORT ─────────────────────────────────────────────
+window.importFromUrl=async function(){
+  const val=document.getElementById('clippdUrlInput').value.trim();
+  // Accept full URL or just the ID number
+  const idM=val.match(/teams\/(\d+)/)||val.match(/^(\d+)$/);
+  if(!idM){ setStatus('err','Enter a Clippd team URL like scoreboard.clippd.com/teams/3816 or just the ID number'); return; }
+  const id=idM[1];
+  setStatus('info','Fetching team '+id+'…');
+  setSearchLoading(true);
+  await importFromClippd({id, name:null, logoUrl:null});
+};
 
 // ── LOAD SAVED SCHOOLS ────────────────────────────────────────────
 async function loadSchools(){
