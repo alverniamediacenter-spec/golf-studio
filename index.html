@@ -57,12 +57,23 @@ main{max-width:1200px;margin:0 auto;padding:32px 28px}
 .ti:focus{border-color:var(--gold)}
 .ti::placeholder{color:var(--dim)}
 .player-rows{display:flex;flex-direction:column;gap:6px}
-.pr{display:grid;grid-template-columns:24px 1fr 1fr auto;gap:8px;align-items:center}
-.pr-num{font-size:.6rem;color:var(--gold);font-weight:600;text-align:center}
-.pr-rm{width:22px;height:22px;background:transparent;border:1px solid var(--bdr);
-  border-radius:2px;color:var(--muted);cursor:pointer;font-size:.65rem;
-  display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pr{background:var(--s2);border:1px solid var(--bdr);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.pr-header{display:flex;align-items:center;gap:10px}
+.pr-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;flex-shrink:0}
+.pr-rm{background:transparent;border:1px solid var(--bdr);border-radius:2px;color:var(--muted);cursor:pointer;font-size:.65rem;padding:3px 8px;transition:all .15s;margin-left:auto;font-family:var(--mono)}
 .pr-rm:hover{border-color:var(--red);color:var(--red)}
+.pr-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pr-colors{display:grid;grid-template-columns:1fr 1fr 36px;gap:8px;align-items:end}
+.color-swatch-wrap{display:flex;flex-direction:column;gap:3px}
+.color-swatch-label{font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.color-row{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bdr2);border-radius:3px;padding:5px 8px;cursor:pointer;transition:border-color .15s}
+.color-row:hover{border-color:var(--bdr3)}
+.swatch-dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.15);flex-shrink:0}
+.swatch-hex{font-size:.58rem;color:var(--muted);letter-spacing:.04em;font-family:var(--mono)}
+.color-input{opacity:0;width:0;height:0;position:absolute;pointer-events:none}
+.logo-preview{width:36px;height:36px;border-radius:3px;background:var(--bg);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logo-preview img{width:100%;height:100%;object-fit:contain}
+.logo-status{font-size:.48rem;color:var(--muted);letter-spacing:.06em;text-align:center;margin-top:2px}
 .holes-toggle{display:flex;gap:8px}
 .ht{padding:7px 16px;background:var(--s2);border:1px solid var(--bdr2);
   color:var(--muted);border-radius:3px;cursor:pointer;font-family:var(--mono);
@@ -149,6 +160,7 @@ main{max-width:1200px;margin:0 auto;padding:32px 28px}
   <div class="logo">Golf Broadcast Studio<span class="logo-sub">Tournament Dashboard</span></div>
   <div class="hdr-right">
     <div id="firebaseStatus" style="font-size:.55rem;color:var(--muted);letter-spacing:.08em">Connecting…</div>
+    <a href="/schools.html" class="btn btn-ghost btn-sm" style="text-decoration:none">🎓 Schools</a>
     <a href="/courses.html" class="btn btn-ghost btn-sm" style="text-decoration:none">⛳ Courses</a>
   </div>
 </div>
@@ -186,6 +198,9 @@ main{max-width:1200px;margin:0 auto;padding:32px 28px}
           Select a course to show par and yardage in overlays
         </div>
       </div>
+      <div class="fg">
+        <div class="fl">Holes</div>
+        <div class="holes-toggle">
           <div class="ht" id="fh9" onclick="setHoles(9)">9 holes</div>
           <div class="ht active" id="fh18" onclick="setHoles(18)">18 holes</div>
         </div>
@@ -253,30 +268,142 @@ const LT_FIELDS=[
 ];
 
 // ── FORM STATE ─────────────────────────────────────────────────────
-let _players=[{name:'',team:''},{name:'',team:''},{name:'',team:''}];
+let _players=[
+  {name:'',team:'',primaryColor:DEFAULT_PRIMARIES[0],secondaryColor:DEFAULT_SECONDARIES[0],logoUrl:null,domain:null},
+  {name:'',team:'',primaryColor:DEFAULT_PRIMARIES[1],secondaryColor:DEFAULT_SECONDARIES[1],logoUrl:null,domain:null},
+  {name:'',team:'',primaryColor:DEFAULT_PRIMARIES[2],secondaryColor:DEFAULT_SECONDARIES[2],logoUrl:null,domain:null},
+];
 let _holes=18;
 let _ltStyle='broadcast';
 let _ltFields=Object.fromEntries(LT_FIELDS.map(f=>[f.key,f.default]));
 let _toastT;
 
 // ── PLAYER ROWS ────────────────────────────────────────────────────
+// Default school colors per player slot
+const DEFAULT_PRIMARIES=['#1a3a6b','#8b1a1a','#1a5c2e','#4a1a6b'];
+const DEFAULT_SECONDARIES=['#c9aa4e','#c9aa4e','#c9aa4e','#c9aa4e'];
+
 function buildPlayerRows(){
   const wrap=document.getElementById('playerRows'); wrap.innerHTML='';
   _players.forEach((p,i)=>{
-    const row=document.createElement('div'); row.className='pr';
-    row.innerHTML=`
-      <div class="pr-num" style="color:${P_COLORS[i]}">${i+1}</div>
-      <input class="ti" id="pname-${i}" placeholder="Player name" value="${p.name}"
-        style="font-size:.7rem;padding:7px 10px">
-      <input class="ti" id="pteam-${i}" placeholder="School / team" value="${p.team}"
-        style="font-size:.7rem;padding:7px 10px">
-      ${_players.length>1?`<button class="pr-rm" onclick="removePlayerRow(${i})">✕</button>`:'<div></div>'}`;
-    wrap.appendChild(row);
+    const pri=p.primaryColor||DEFAULT_PRIMARIES[i]||'#1a3a6b';
+    const sec=p.secondaryColor||DEFAULT_SECONDARIES[i]||'#c9aa4e';
+    const div=document.createElement('div'); div.className='pr'; div.id='pr-'+i;
+    div.innerHTML=`
+      <div class="pr-header">
+        <div class="pr-num" style="background:${pri};color:${sec}">${i+1}</div>
+        <div style="flex:1;font-size:.65rem;color:var(--cream)">${p.name||`Player ${i+1}`}</div>
+        ${_players.length>1?`<button class="pr-rm" onclick="removePlayerRow(${i})">✕ Remove</button>`:''}
+      </div>
+      <div class="pr-row">
+        <div class="fg" style="grid-column:1/-1">
+          <div class="fl">School (from database)</div>
+          <div style="display:flex;gap:7px;align-items:center">
+            <select class="ti" id="pschool-${i}" style="flex:1;cursor:pointer;font-size:.68rem;padding:7px 10px"
+              onchange="applySchool(${i},this.value)">
+              <option value="">— Pick a saved school —</option>
+              ${window._savedSchools?.map(s=>`<option value="${s.id}"${_players[i].schoolId===s.id?' selected':''}>${s.name}</option>`).join('')||''}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="pr-row">
+        <div class="fg"><div class="fl">Player name</div>
+          <input class="ti" id="pname-${i}" placeholder="First Last" value="${p.name||''}"
+            style="font-size:.7rem;padding:8px 10px"
+            oninput="onPlayerNameChange(${i},this.value)"></div>
+        <div class="fg"><div class="fl">School / Team</div>
+          <input class="ti" id="pteam-${i}" placeholder="University name" value="${p.team||''}"
+            style="font-size:.7rem;padding:8px 10px"
+            oninput="onTeamChange(${i},this.value)"></div>
+      </div>
+      <div class="pr-row">
+        <div class="fg"><div class="fl">School domain (for logo)</div>
+          <div style="display:flex;gap:5px">
+            <input class="ti" id="pdomain-${i}" placeholder="e.g. villanova.edu" value="${p.domain||''}"
+              style="font-size:.7rem;padding:8px 10px;flex:1">
+            <button class="btn btn-ghost btn-sm" onclick="fetchLogo(${i})">Fetch</button>
+          </div>
+        </div>
+        <div class="fg"><div class="fl">Logo preview</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="logo-preview" id="logo-preview-${i}">
+              ${p.logoUrl?`<img src="${p.logoUrl}" alt="">`:'<span style="font-size:.7rem;color:var(--dim)">—</span>'}
+            </div>
+            <div class="logo-status" id="logo-status-${i}">${p.logoUrl?'Logo set':'No logo'}</div>
+          </div>
+        </div>
+      </div>
+      <div class="pr-colors">
+        <div class="color-swatch-wrap">
+          <div class="color-swatch-label">Primary color</div>
+          <div class="color-row" onclick="document.getElementById('pc-${i}').click()">
+            <div class="swatch-dot" id="pdot-${i}" style="background:${pri}"></div>
+            <div class="swatch-hex" id="phex-${i}">${pri}</div>
+            <input type="color" class="color-input" id="pc-${i}" value="${pri}"
+              oninput="onPrimaryColor(${i},this.value)">
+          </div>
+        </div>
+        <div class="color-swatch-wrap">
+          <div class="color-swatch-label">Secondary color</div>
+          <div class="color-row" onclick="document.getElementById('sc-${i}').click()">
+            <div class="swatch-dot" id="sdot-${i}" style="background:${sec}"></div>
+            <div class="swatch-hex" id="shex-${i}">${sec}</div>
+            <input type="color" class="color-input" id="sc-${i}" value="${sec}"
+              oninput="onSecondaryColor(${i},this.value)">
+          </div>
+        </div>
+      </div>`;
+    wrap.appendChild(div);
   });
 }
+
+window.onPlayerNameChange=function(i,val){
+  _players[i].name=val;
+  const hdr=document.querySelector(`#pr-${i} .pr-header div:nth-child(2)`);
+  if(hdr) hdr.textContent=val||`Player ${i+1}`;
+};
+window.onTeamChange=function(i,val){ _players[i].team=val; };
+window.onPrimaryColor=function(i,val){
+  _players[i].primaryColor=val;
+  document.getElementById('pdot-'+i).style.background=val;
+  document.getElementById('phex-'+i).textContent=val;
+  const num=document.querySelector(`#pr-${i} .pr-num`);
+  if(num) num.style.background=val;
+};
+window.onSecondaryColor=function(i,val){
+  _players[i].secondaryColor=val;
+  document.getElementById('sdot-'+i).style.background=val;
+  document.getElementById('shex-'+i).textContent=val;
+  const num=document.querySelector(`#pr-${i} .pr-num`);
+  if(num) num.style.color=val;
+};
+window.fetchLogo=function(i){
+  const domain=document.getElementById('pdomain-'+i).value.trim();
+  if(!domain){toast('Enter a domain first, e.g. villanova.edu');return;}
+  const url=`https://logo.clearbit.com/${domain}`;
+  const preview=document.getElementById('logo-preview-'+i);
+  const status=document.getElementById('logo-status-'+i);
+  status.textContent='Fetching…';
+  const img=new Image();
+  img.onload=()=>{
+    _players[i].logoUrl=url;
+    _players[i].domain=domain;
+    preview.innerHTML=`<img src="${url}" alt="">`;
+    status.textContent='✓ Logo set';
+    toast('Logo loaded for player '+(i+1));
+  };
+  img.onerror=()=>{
+    status.textContent='Not found';
+    toast('No logo found for '+domain+' — try a different domain');
+  };
+  img.src=url;
+};
 window.addPlayerRow=function(){
   if(_players.length>=5){toast('Max 5 players');return;}
-  _players.push({name:'',team:''}); buildPlayerRows();
+  const i=_players.length;
+  _players.push({name:'',team:'',primaryColor:DEFAULT_PRIMARIES[i]||'#333',secondaryColor:DEFAULT_SECONDARIES[i]||'#fff',logoUrl:null,domain:null});
+  buildPlayerRows();
 };
 window.removePlayerRow=function(i){ _players.splice(i,1); buildPlayerRows(); };
 
@@ -310,18 +437,19 @@ function buildLTToggles(){
 
 // ── CREATE SESSION ─────────────────────────────────────────────────
 window.createSession=async function(){
-  // Read player values directly from inputs — oninput may not fire reliably in module scope
-  const rows=document.getElementById('playerRows').querySelectorAll('.pr');
   const players=[];
-  rows.forEach((row,i)=>{
-    const inputs=row.querySelectorAll('input');
-    const name=(inputs[0]?.value||'').trim();
-    const team=(inputs[1]?.value||'').trim();
+  _players.forEach((p,i)=>{
+    const name=(document.getElementById('pname-'+i)?.value||p.name||'').trim();
+    const team=(document.getElementById('pteam-'+i)?.value||p.team||'').trim();
+    const primaryColor=p.primaryColor||DEFAULT_PRIMARIES[i]||'#1a3a6b';
+    const secondaryColor=p.secondaryColor||DEFAULT_SECONDARIES[i]||'#c9aa4e';
+    const logoUrl=p.logoUrl||null;
+    const domain=p.domain||(document.getElementById('pdomain-'+i)?.value||'').trim()||null;
     if(name||i===0){
       players.push({
-        name: name||`Player ${i+1}`,
-        team: team||'',
-        color: P_COLORS[i]||P_COLORS[0]
+        name:name||`Player ${i+1}`, team:team||'',
+        color:primaryColor,
+        primaryColor, secondaryColor, logoUrl, domain
       });
     }
   });
@@ -447,6 +575,42 @@ buildLTToggles();
 window.loadSessions();
 startLiveSessionUpdates();
 loadCoursesDropdown();
+loadSchoolsCache();
+
+async function loadSchoolsCache(){
+  try{
+    const snap=await getDocs(query(collection(db,'schools'),orderBy('name','asc')));
+    window._savedSchools=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Rebuild player rows to populate school dropdowns
+    buildPlayerRows();
+  }catch(e){ console.warn('Could not load schools:',e); }
+}
+
+window.applySchool=function(i,schoolId){
+  if(!schoolId){ return; }
+  const school=window._savedSchools?.find(s=>s.id===schoolId);
+  if(!school) return;
+  _players[i].schoolId=schoolId;
+  _players[i].team=school.name;
+  _players[i].primaryColor=school.primaryColor||DEFAULT_PRIMARIES[i];
+  _players[i].secondaryColor=school.secondaryColor||DEFAULT_SECONDARIES[i];
+  _players[i].logoUrl=school.logoUrl||null;
+  _players[i].domain=school.domain||null;
+  // Update the visible inputs
+  const teamInput=document.getElementById('pteam-'+i);
+  if(teamInput) teamInput.value=school.name;
+  const priInput=document.getElementById('pc-'+i);
+  if(priInput){ priInput.value=school.primaryColor||DEFAULT_PRIMARIES[i]; onPrimaryColor(i,priInput.value); }
+  const secInput=document.getElementById('sc-'+i);
+  if(secInput){ secInput.value=school.secondaryColor||DEFAULT_SECONDARIES[i]; onSecondaryColor(i,secInput.value); }
+  const logoPreview=document.getElementById('logo-preview-'+i);
+  const logoStatus=document.getElementById('logo-status-'+i);
+  if(logoPreview&&school.logoUrl){
+    logoPreview.innerHTML=`<img src="${school.logoUrl}" alt="">`;
+    if(logoStatus) logoStatus.textContent='✓ Logo set';
+  }
+  toast(`${school.name} colors and logo applied`);
+};
 
 async function loadCoursesDropdown(){
   try{
