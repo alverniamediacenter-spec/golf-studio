@@ -1130,6 +1130,7 @@ window.startRender=async function(){
   document.getElementById('progBG').classList.add('on');
   setProgress(0,'Setting up canvas…');
   try{
+    await preloadLogos();
     const W=fmt.W, H=fmt.H;
     const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
     const ctx=canvas.getContext('2d');
@@ -1211,6 +1212,40 @@ function renderClip(clip,canvas,ctx,W,H){
   });
 }
 
+// Preload player logos into Image objects for canvas rendering
+const _logoCache={};
+function preloadLogos(){
+  return Promise.all(S.players.map(p=>{
+    if(!p.logoUrl||_logoCache[p.name]) return Promise.resolve();
+    return new Promise(res=>{
+      const img=new Image(); img.crossOrigin='anonymous';
+      img.onload=()=>{ _logoCache[p.name]=img; res(); };
+      img.onerror=()=>{
+        // Try without proxy as fallback
+        const img2=new Image();
+        img2.onload=()=>{ _logoCache[p.name]=img2; res(); };
+        img2.onerror=()=>res();
+        img2.src=p.logoUrl;
+      };
+      // Proxy Cloudinary and Clearbit URLs to avoid CORS canvas taint
+      const needsProxy=p.logoUrl.includes('cloudinary')||
+                        p.logoUrl.includes('clearbit')||
+                        p.logoUrl.includes('clippd-prod');
+      img.src=needsProxy
+        ? `https://corsproxy.io/?${encodeURIComponent(p.logoUrl)}`
+        : p.logoUrl;
+    });
+  }));
+}
+
+// Helper — get player's primary/secondary colors with fallbacks
+function playerColors(pl){
+  return {
+    primary: pl?.primaryColor || pl?.color || '#1a3a6b',
+    secondary: pl?.secondaryColor || '#c9aa4e',
+  };
+}
+
 // Helper — get hole info from course data
 function getHoleInfo(holeNum){
   const h=S.course?.holes?.[holeNum-1];
@@ -1237,61 +1272,72 @@ function drawBroadcastLT(ctx,clip,st,pl,W,H){
   const scale=Math.min(W,H)/720;
   const barH=Math.round(72*scale);
   const lx=Math.round(16*scale);
+  const colors=playerColors(pl);
 
-  // Full-width bar — edge to edge
-  ctx.fillStyle='rgba(0,0,0,0.72)';
+  // Full-width bar using player's primary color
+  ctx.fillStyle=hexToRgba(colors.primary, 0.85);
   ctx.fillRect(0, H-barH, W, barH);
-  // Color accent stripe full width
-  ctx.fillStyle=st.color;
+  // Accent stripe in secondary color
+  ctx.fillStyle=colors.secondary;
   ctx.fillRect(0, H-(barH+3), W, 3);
 
   // Tournament name top center
   if(f.tournament&&S.tournament){
     ctx.font=`${Math.round(9*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='rgba(201,170,78,.7)';
+    ctx.fillStyle='rgba(255,255,255,.6)';
     ctx.textAlign='center';
     ctx.fillText(S.tournament.toUpperCase(), W/2, Math.round(16*scale));
     ctx.textAlign='left';
   }
 
   // Shot type · Hole N
-  const shotPart = f.shotType ? `${st.icon} ${st.label.toUpperCase()}` : '';
-  const holePart = f.holeNum  ? `HOLE ${clip.hole}` : '';
-  const sep      = (shotPart&&holePart) ? '  ·  ' : '';
+  const shotPart=f.shotType?`${st.icon} ${st.label.toUpperCase()}`:'';
+  const holePart=f.holeNum?`HOLE ${clip.hole}`:'';
+  const sep=(shotPart&&holePart)?'  ·  ':'';
   if(shotPart||holePart){
     ctx.font=`bold ${Math.round(13*scale)}px "Azeret Mono"`;
-    ctx.fillStyle=st.color;
+    ctx.fillStyle=colors.secondary;
     ctx.fillText(shotPart+sep+holePart, lx, H-Math.round(barH-20*scale));
   }
 
-  // Player name
+  // Player name in secondary color
   if(f.playerName&&clip.player){
     ctx.font=`bold ${Math.round(22*scale)}px "Libre Baskerville"`;
-    ctx.fillStyle='#f3efe4';
+    ctx.fillStyle=colors.secondary;
     ctx.fillText(clip.player, lx, H-Math.round(barH-46*scale));
   }
 
-  // Team name
+  // Team name lighter
   if(f.teamName&&pl?.team){
     ctx.font=`${Math.round(11*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='rgba(224,215,194,.65)';
+    ctx.fillStyle='rgba(255,255,255,.65)';
     ctx.fillText(pl.team.toUpperCase(), lx, H-Math.round(barH-62*scale));
   }
 
-  // Par + yardage right side
+  // Logo — right side, above par/yardage
+  const logo=pl?_logoCache[pl.name]:null;
+  const logoSize=Math.round(52*scale);
+  let parX=W-Math.round(16*scale);
+  if(logo){
+    const lx2=W-logoSize-Math.round(80*scale);
+    const ly=H-barH+Math.round((barH-logoSize)/2);
+    ctx.drawImage(logo, lx2, ly, logoSize, logoSize);
+    parX=lx2-Math.round(8*scale);
+  }
+
+  // Par + yardage
   const hi=getHoleInfo(clip.hole);
   if(hi.par||hi.yardage){
-    const rx=W-Math.round(16*scale);
     ctx.textAlign='right';
     if(hi.yardage){
       ctx.font=`bold ${Math.round(18*scale)}px "Azeret Mono"`;
-      ctx.fillStyle='#f3efe4';
-      ctx.fillText(hi.yardage+' YDS', rx, H-Math.round(barH-38*scale));
+      ctx.fillStyle=colors.secondary;
+      ctx.fillText(hi.yardage+' YDS', parX, H-Math.round(barH-38*scale));
     }
     if(hi.par){
       ctx.font=`bold ${Math.round(14*scale)}px "Azeret Mono"`;
-      ctx.fillStyle=st.color;
-      ctx.fillText('PAR '+hi.par, rx, H-Math.round(barH-58*scale));
+      ctx.fillStyle='rgba(255,255,255,.8)';
+      ctx.fillText('PAR '+hi.par, parX, H-Math.round(barH-58*scale));
     }
     ctx.textAlign='left';
   }
@@ -1299,7 +1345,7 @@ function drawBroadcastLT(ctx,clip,st,pl,W,H){
   // Stars
   if(f.stars&&clip.stars>0){
     ctx.font=`${Math.round(12*scale)}px serif`;
-    ctx.fillStyle='#c9aa4e';
+    ctx.fillStyle=colors.secondary;
     ctx.textAlign='right';
     ctx.fillText(STAR_ICONS[clip.stars], W-Math.round(16*scale), H-Math.round(10*scale));
     ctx.textAlign='left';
@@ -1308,10 +1354,10 @@ function drawBroadcastLT(ctx,clip,st,pl,W,H){
   // Hole-out vignette
   if(clip.shotKey==='hole'){
     const g=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.72);
-    g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(201,170,78,.2)');
+    g.addColorStop(0,'transparent'); g.addColorStop(1,hexToRgba(colors.primary,.3));
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     ctx.font=`bold ${Math.round(17*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='#c9aa4e';
+    ctx.fillStyle=colors.secondary;
     ctx.textAlign='right';
     ctx.fillText('★ HOLE OUT', W-Math.round(16*scale), H-Math.round(12*scale));
     ctx.textAlign='left';
@@ -1323,79 +1369,100 @@ function drawMinimalLT(ctx,clip,st,pl,W,H){
   const f=S.lt.fields;
   const scale=Math.min(W,H)/720;
   const hi=getHoleInfo(clip.hole);
+  const colors=playerColors(pl);
+  const logo=pl?_logoCache[pl.name]:null;
 
-  // Box dimensions — proportional to frame
-  const boxW=Math.round(260*scale);
-  const boxH=Math.round(90*scale);
-  const bx=W-boxW-Math.round(16*scale); // right-aligned with margin
-  const by=Math.round(14*scale);          // top margin
+  // Box dimensions
+  const boxW=Math.round(270*scale);
+  const hdrH=Math.round(20*scale);
+  const mainH=Math.round(46*scale);
+  const botH=Math.round(24*scale);
+  const totalH=hdrH+mainH+botH;
+  const bx=W-boxW-Math.round(16*scale);
+  const by=Math.round(14*scale);
   const pad=Math.round(10*scale);
 
-  // Header row — dark background, small text
-  const hdrH=Math.round(20*scale);
-  ctx.fillStyle='rgba(0,0,0,0.78)';
+  // Header row
+  ctx.fillStyle='rgba(0,0,0,0.82)';
   ctx.fillRect(bx, by, boxW, hdrH);
   if(f.tournament&&S.tournament){
     ctx.font=`${Math.round(8*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='rgba(201,170,78,.8)';
+    ctx.fillStyle='rgba(255,255,255,.55)';
     ctx.textAlign='center';
     ctx.fillText(S.tournament.toUpperCase(), bx+boxW/2, by+Math.round(13*scale));
     ctx.textAlign='left';
   }
 
-  // Main box — slightly lighter
+  // Main box — player's primary color
   const mainY=by+hdrH;
-  const mainH=Math.round(46*scale);
-  ctx.fillStyle='rgba(8,8,8,0.88)';
+  ctx.fillStyle=hexToRgba(colors.primary, 0.9);
   ctx.fillRect(bx, mainY, boxW, mainH);
 
-  // Player name — large, left-aligned
-  if(f.playerName&&clip.player){
-    ctx.font=`bold ${Math.round(20*scale)}px "Libre Baskerville"`;
-    ctx.fillStyle='#f3efe4';
-    ctx.fillText(clip.player.toUpperCase(), bx+pad, mainY+Math.round(mainH*0.65));
+  // Logo — left side of main box
+  const logoSize=Math.round(36*scale);
+  let nameLx=bx+pad;
+  if(logo){
+    const logoX=bx+pad;
+    const logoY=mainY+Math.round((mainH-logoSize)/2);
+    // White circle background for logo
+    ctx.fillStyle='rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.arc(logoX+logoSize/2, logoY+logoSize/2, logoSize/2+2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+    nameLx=logoX+logoSize+Math.round(8*scale);
   }
 
-  // Score-to-par badge — right side of main box (red/green like Masters)
-  // For now show hole number as the badge if no score data
-  const holeLabel=`${clip.hole}`;
-  const badgeW=Math.round(38*scale), badgeH=Math.round(28*scale);
+  // Player name in secondary color
+  if(f.playerName&&clip.player){
+    ctx.font=`bold ${Math.round(18*scale)}px "Libre Baskerville"`;
+    ctx.fillStyle=colors.secondary;
+    // Truncate if too long
+    let name=clip.player.toUpperCase();
+    const maxW=boxW-(nameLx-bx)-Math.round(46*scale);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(nameLx, mainY, maxW, mainH);
+    ctx.clip();
+    ctx.fillText(name, nameLx, mainY+Math.round(mainH*0.65));
+    ctx.restore();
+  }
+
+  // Hole number badge — right side of main box (red)
+  const badgeW=Math.round(36*scale), badgeH=Math.round(28*scale);
   const badgeX=bx+boxW-badgeW-Math.round(4*scale);
   const badgeY=mainY+Math.round((mainH-badgeH)/2);
-  ctx.fillStyle='#c0392b'; // red — matches Masters
+  ctx.fillStyle='#c0392b';
   ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
   ctx.font=`bold ${Math.round(14*scale)}px "Azeret Mono"`;
   ctx.fillStyle='#fff';
   ctx.textAlign='center';
-  ctx.fillText(holeLabel, badgeX+badgeW/2, badgeY+Math.round(badgeH*0.72));
+  ctx.fillText(String(clip.hole), badgeX+badgeW/2, badgeY+Math.round(badgeH*0.72));
   ctx.textAlign='left';
 
-  // Bottom row — position/team + yardage + par
+  // Bottom row — secondary color bar
   const botY=mainY+mainH;
-  const botH=Math.round(24*scale);
-  ctx.fillStyle=st.color; // colored bar for shot type accent
+  ctx.fillStyle=colors.secondary;
   ctx.fillRect(bx, botY, boxW, botH);
+  ctx.fillStyle='rgba(0,0,0,0.75)';
 
   // Team left
   if(f.teamName&&pl?.team){
     ctx.font=`bold ${Math.round(9*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='rgba(0,0,0,0.85)';
     ctx.fillText(pl.team.toUpperCase(), bx+pad, botY+Math.round(botH*0.72));
   }
 
-  // Yardage center-right
+  // Yardage center
   if(hi.yardage){
     ctx.font=`bold ${Math.round(10*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='rgba(0,0,0,0.85)';
     ctx.textAlign='center';
     ctx.fillText(hi.yardage+' YDS', bx+boxW*0.6, botY+Math.round(botH*0.72));
     ctx.textAlign='left';
   }
 
-  // Par far right
+  // Par right
   if(hi.par){
     ctx.font=`bold ${Math.round(10*scale)}px "Azeret Mono"`;
-    ctx.fillStyle='rgba(0,0,0,0.85)';
     ctx.textAlign='right';
     ctx.fillText('PAR '+hi.par, bx+boxW-pad, botY+Math.round(botH*0.72));
     ctx.textAlign='left';
@@ -1606,6 +1673,15 @@ function drawQR(url,containerId,size){
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 function fmt(s){ if(!s||isNaN(s)) return '0s'; return s<60?s.toFixed(1)+'s':Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
 function vidDur(url){ return new Promise(r=>{ const v=document.createElement('video'); v.src=url; v.onloadedmetadata=()=>r(v.duration); v.onerror=()=>r(0); }); }
+function hexToRgba(hex,alpha){
+  // Accepts #rgb or #rrggbb
+  let h=hex.replace('#','');
+  if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const r=parseInt(h.slice(0,2),16);
+  const g=parseInt(h.slice(2,4),16);
+  const b=parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 function getMime(){
   const types=[
     'video/webm;codecs=vp9,opus',
