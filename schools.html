@@ -326,7 +326,7 @@ function parseSearchResults(html, query){
     const d=document.createElement('div'); d.className='sr-item';
     d.innerHTML=`
       <div class="sr-logo">
-        ${t.logoUrl?`<img src="${t.logoUrl}" alt="" crossorigin="anonymous">`:'<span style="font-size:.8rem;color:var(--dim)">?</span>'}
+        ${t.logoUrl?`<img src="${proxiedImgUrl(t.logoUrl)}" alt="" onerror="this.style.display='none'">`:'<span style="font-size:.8rem;color:var(--dim)">?</span>'}
       </div>
       <div class="sr-info">
         <div class="sr-name">${t.name||'Team #'+t.id}</div>
@@ -414,7 +414,7 @@ function renderSchoolList(){
     d.id='si-'+s.id;
     d.innerHTML=`
       <div class="si-logo">
-        ${s.logoUrl?`<img src="${s.logoUrl}" alt="" crossorigin="anonymous">`:'<span style="font-size:.9rem">🎓</span>'}
+        ${s.logoUrl?`<img src="${proxiedImgUrl(s.logoUrl)}" alt="" onerror="this.style.display='none'">`:'<span style="font-size:.9rem">🎓</span>'}
       </div>
       <div class="si-info">
         <div class="si-name">${s.name}</div>
@@ -457,7 +457,7 @@ function renderEditor(s){
           <div style="font-size:15px;color:${sec};font-weight:700;font-family:'Libre Baskerville',serif;margin-top:2px">${s.name.split(' ')[0].toUpperCase()}</div>
           <div style="font-size:9px;color:rgba(255,255,255,.6);font-family:'Azeret Mono',monospace;margin-top:1px">${s.name.toUpperCase()}</div>
         </div>
-        ${s.logoUrl?`<img src="${s.logoUrl}" style="width:44px;height:44px;object-fit:contain;opacity:.9" crossorigin="anonymous">`:''}
+        ${s.logoUrl?`<img src="${proxiedImgUrl(s.logoUrl)}" style="width:44px;height:44px;object-fit:contain;opacity:.9" onerror="this.style.display='none'">`:''}
         <div style="margin-left:8px;text-align:right">
           <div style="font-size:14px;color:${sec};font-weight:700;font-family:'Azeret Mono',monospace">400 YDS</div>
           <div style="font-size:11px;color:rgba(255,255,255,.7);font-family:'Azeret Mono',monospace">PAR 4</div>
@@ -467,7 +467,7 @@ function renderEditor(s){
         <div style="background:${pri};border-radius:3px;padding:8px 12px;display:inline-flex;flex-direction:column;gap:3px;min-width:200px">
           <div style="font-size:8px;color:rgba(255,255,255,.55);letter-spacing:.1em;text-align:center;font-family:'Azeret Mono',monospace">TOURNAMENT NAME</div>
           <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-            ${s.logoUrl?`<img src="${s.logoUrl}" style="width:28px;height:28px;object-fit:contain" crossorigin="anonymous">`:''}
+            ${s.logoUrl?`<img src="${proxiedImgUrl(s.logoUrl)}" style="width:28px;height:28px;object-fit:contain" onerror="this.style.display='none'">`:''}
             <div style="font-size:14px;color:${sec};font-weight:700;font-family:'Libre Baskerville',serif">${s.name.split(' ')[0].toUpperCase()}</div>
             <div style="margin-left:auto;background:#c0392b;padding:2px 7px;border-radius:2px;font-size:11px;color:#fff;font-family:'Azeret Mono',monospace;font-weight:700">1</div>
           </div>
@@ -521,7 +521,7 @@ function renderEditor(s){
       <div class="fl" style="margin-bottom:8px">Logo</div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
         <div style="width:60px;height:60px;border-radius:4px;background:var(--bg);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;overflow:hidden">
-          ${s.logoUrl?`<img src="${s.logoUrl}" id="logoImg" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous">`:'<span id="logoImg" style="font-size:1.2rem;color:var(--dim)">🎓</span>'}
+          ${s.logoUrl?`<img src="${proxiedImgUrl(s.logoUrl)}" id="logoImg" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">`:'<span id="logoImg" style="font-size:1.2rem;color:var(--dim)">🎓</span>'}
         </div>
         <div style="flex:1;display:flex;flex-direction:column;gap:6px">
           <div class="fg"><div class="fl">Logo URL</div>
@@ -579,30 +579,89 @@ function updatePreview(){
   prev.querySelectorAll('[data-sec]').forEach(el=>el.style.color=sec);
 }
 
-window.fetchClearbitLogo=function(){
+// ── LOGO UTILITIES ────────────────────────────────────────────────
+
+// Proxy an image URL through CORS to allow loading cross-origin
+function proxiedImgUrl(url){
+  if(!url) return null;
+  // Cloudinary and Clearbit are the main ones that need proxying
+  if(url.includes('cloudinary') || url.includes('clearbit') ||
+     url.includes('clippd-prod')){
+    return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+function setLogoImg(url){
+  // Store the raw URL in state/input, display via proxy
+  const holder=document.getElementById('logoImg');
+  const displayUrl=proxiedImgUrl(url)||url;
+  if(holder){
+    if(holder.tagName==='IMG'){
+      holder.src=displayUrl;
+      holder.onerror=()=>{ holder.src=''; holder.style.display='none'; };
+    } else {
+      holder.outerHTML=`<img id="logoImg" src="${displayUrl}"
+        style="width:100%;height:100%;object-fit:contain"
+        onerror="this.style.display='none'">`;
+    }
+  }
+  if(_active) _active.logoUrl=url; // store the original, not the proxy
+  const input=document.getElementById('eLogoUrl');
+  if(input) input.value=url;
+  updatePreview();
+}
+
+// Try multiple logo sources for a university
+async function findUniversityLogo(domain, schoolName){
+  // Sources to try in order
+  const attempts=[
+    // 1. Clearbit
+    `https://logo.clearbit.com/${domain}`,
+    // 2. Common athletic department logo patterns
+    `https://${domain}/images/logos/logo.png`,
+    `https://${domain}/images/logo.png`,
+    `https://athletics.${domain}/images/logo.png`,
+    // 3. Google favicon (high res) — works for most .edu domains
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  ];
+
+  for(const url of attempts){
+    const worked=await testImageUrl(proxiedImgUrl(url));
+    if(worked) return url;
+  }
+  return null;
+}
+
+function testImageUrl(url){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>res(img.width>16); // reject tiny favicons
+    img.onerror=()=>res(false);
+    setTimeout(()=>res(false), 5000);
+    img.src=url;
+  });
+}
+
+window.fetchClearbitLogo=async function(){
   const domain=document.getElementById('eDomain')?.value?.trim();
-  if(!domain){toast('Enter a domain first');return;}
-  const url=`https://logo.clearbit.com/${domain}`;
-  const img=new Image(); img.crossOrigin='anonymous';
-  img.onload=()=>{
-    if(_active) { _active.logoUrl=url; _active.domain=domain; }
-    document.getElementById('eLogoUrl').value=url;
-    const holder=document.getElementById('logoImg');
-    if(holder.tagName==='IMG') holder.src=url;
-    else { holder.outerHTML=`<img id="logoImg" src="${url}" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous">`; }
-    toast('Logo loaded from Clearbit ✓');
-  };
-  img.onerror=()=>toast('No logo found for '+domain);
-  img.src=url;
+  if(!domain){toast('Enter a domain first, e.g. villanova.edu');return;}
+  toast('Searching for logo…');
+  const url=await findUniversityLogo(domain, _active?.name||'');
+  if(url){
+    setLogoImg(url);
+    if(_active) _active.domain=domain;
+    toast('Logo found ✓');
+  } else {
+    toast('No logo found — try pasting a direct URL');
+  }
 };
 
 window.previewLogoUrl=function(){
   const url=document.getElementById('eLogoUrl')?.value?.trim();
   if(!url){toast('Enter a logo URL first');return;}
-  const holder=document.getElementById('logoImg');
-  if(_active) _active.logoUrl=url;
-  if(holder.tagName==='IMG') holder.src=url;
-  else holder.outerHTML=`<img id="logoImg" src="${url}" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous">`;
+  setLogoImg(url);
+  toast('Logo preview updated');
 };
 
 // ── SAVE ──────────────────────────────────────────────────────────
