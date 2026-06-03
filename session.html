@@ -1426,19 +1426,18 @@ function drawMinimalLT(ctx,clip,st,pl,W,H){
   ctx.fillText(String(clip.hole), badgeX+badgeW/2, badgeY+Math.round(badgeH*0.72));
   ctx.textAlign='left';
 
-  // Player name — clipped to the space between name start and badge left edge
+  // Player name — truncate with ellipsis to fit between nameLx and badge left edge
   if(f.playerName&&clip.player){
     ctx.font=`bold ${Math.round(18*scale)}px "Libre Baskerville"`;
     ctx.fillStyle=colors.secondary;
-    const name=clip.player.toUpperCase();
-    // Available width = from nameLx to badge left edge minus a small gap
-    const nameMaxW=badgeX-nameLx-Math.round(6*scale);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(nameLx, mainY, nameMaxW, mainH);
-    ctx.clip();
+    const nameMaxW=badgeX-nameLx-Math.round(8*scale);
+    let name=clip.player.toUpperCase();
+    // Shorten with ellipsis until it fits
+    while(name.length>1 && ctx.measureText(name).width>nameMaxW){
+      name=name.slice(0,-1);
+    }
+    if(name!==clip.player.toUpperCase()) name=name.trimEnd()+'…';
     ctx.fillText(name, nameLx, mainY+Math.round(mainH*0.65));
-    ctx.restore();
   }
 
   // Bottom row — secondary color bar
