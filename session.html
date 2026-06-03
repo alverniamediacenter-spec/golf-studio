@@ -1143,9 +1143,9 @@ window.startRender=async function(){
     try{ stream=canvas.captureStream(30); }
     catch(e){ throw new Error('captureStream not supported: '+e.message); }
     let rec;
-    try{ rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:9000000}); }
+    try{ rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:18000000}); }
     catch(e){
-      try{ rec=new MediaRecorder(stream); }
+      try{ rec=new MediaRecorder(stream,{videoBitsPerSecond:18000000}); }
       catch(e2){ throw new Error('MediaRecorder not supported: '+e2.message); }
     }
     const chunks=[];
@@ -1413,22 +1413,8 @@ function drawMinimalLT(ctx,clip,st,pl,W,H){
     nameLx=logoX+logoSize+Math.round(8*scale);
   }
 
-  // Player name in secondary color
-  if(f.playerName&&clip.player){
-    ctx.font=`bold ${Math.round(18*scale)}px "Libre Baskerville"`;
-    ctx.fillStyle=colors.secondary;
-    // Truncate if too long
-    let name=clip.player.toUpperCase();
-    const maxW=boxW-(nameLx-bx)-Math.round(46*scale);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(nameLx, mainY, maxW, mainH);
-    ctx.clip();
-    ctx.fillText(name, nameLx, mainY+Math.round(mainH*0.65));
-    ctx.restore();
-  }
-
   // Hole number badge — right side of main box (red)
+  // Draw badge FIRST so we know its exact left edge for name clipping
   const badgeW=Math.round(36*scale), badgeH=Math.round(28*scale);
   const badgeX=bx+boxW-badgeW-Math.round(4*scale);
   const badgeY=mainY+Math.round((mainH-badgeH)/2);
@@ -1439,6 +1425,21 @@ function drawMinimalLT(ctx,clip,st,pl,W,H){
   ctx.textAlign='center';
   ctx.fillText(String(clip.hole), badgeX+badgeW/2, badgeY+Math.round(badgeH*0.72));
   ctx.textAlign='left';
+
+  // Player name — clipped to the space between name start and badge left edge
+  if(f.playerName&&clip.player){
+    ctx.font=`bold ${Math.round(18*scale)}px "Libre Baskerville"`;
+    ctx.fillStyle=colors.secondary;
+    const name=clip.player.toUpperCase();
+    // Available width = from nameLx to badge left edge minus a small gap
+    const nameMaxW=badgeX-nameLx-Math.round(6*scale);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(nameLx, mainY, nameMaxW, mainH);
+    ctx.clip();
+    ctx.fillText(name, nameLx, mainY+Math.round(mainH*0.65));
+    ctx.restore();
+  }
 
   // Bottom row — secondary color bar
   const botY=mainY+mainH;
