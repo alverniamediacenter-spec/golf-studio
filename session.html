@@ -1372,8 +1372,8 @@ function drawMinimalLT(ctx,clip,st,pl,W,H){
   const colors=playerColors(pl);
   const logo=pl?_logoCache[pl.name]:null;
 
-  // Box dimensions
-  const boxW=Math.round(270*scale);
+  // Box dimensions — wider box gives names more breathing room
+  const boxW=Math.round(310*scale);
   const hdrH=Math.round(20*scale);
   const mainH=Math.round(46*scale);
   const botH=Math.round(24*scale);
@@ -1426,17 +1426,26 @@ function drawMinimalLT(ctx,clip,st,pl,W,H){
   ctx.fillText(String(clip.hole), badgeX+badgeW/2, badgeY+Math.round(badgeH*0.72));
   ctx.textAlign='left';
 
-  // Player name — truncate with ellipsis to fit between nameLx and badge left edge
+  // Player name — measure and truncate before drawing
   if(f.playerName&&clip.player){
-    ctx.font=`bold ${Math.round(18*scale)}px "Libre Baskerville"`;
+    const nameFontSize=Math.round(18*scale);
+    ctx.font=`bold ${nameFontSize}px "Libre Baskerville", serif`;
     ctx.fillStyle=colors.secondary;
-    const nameMaxW=badgeX-nameLx-Math.round(8*scale);
+    // Extra safety margin — badge may render wider than measured
+    const nameMaxW=badgeX-nameLx-Math.round(14*scale);
     let name=clip.player.toUpperCase();
-    // Shorten with ellipsis until it fits
-    while(name.length>1 && ctx.measureText(name).width>nameMaxW){
-      name=name.slice(0,-1);
+    // Measure and trim until it fits
+    if(ctx.measureText(name).width>nameMaxW){
+      // Binary-search style: start from estimated fit length
+      const avgCharW=ctx.measureText('M').width;
+      let len=Math.floor(nameMaxW/avgCharW);
+      name=name.slice(0,Math.max(1,len));
+      // Fine-tune
+      while(name.length>1&&ctx.measureText(name+'…').width>nameMaxW){
+        name=name.slice(0,-1);
+      }
+      name=name.trimEnd()+'…';
     }
-    if(name!==clip.player.toUpperCase()) name=name.trimEnd()+'…';
     ctx.fillText(name, nameLx, mainY+Math.round(mainH*0.65));
   }
 
