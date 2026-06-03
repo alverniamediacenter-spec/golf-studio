@@ -268,21 +268,20 @@ const LT_FIELDS=[
 ];
 
 // ── FORM STATE ─────────────────────────────────────────────────────
+const DEFAULT_PRIMARIES=['#1a3a6b','#8b1a1a','#1a5c2e','#4a1a6b'];
+const DEFAULT_SECONDARIES=['#c9aa4e','#c9aa4e','#c9aa4e','#c9aa4e'];
+
 let _players=[
   {name:'',team:'',primaryColor:DEFAULT_PRIMARIES[0],secondaryColor:DEFAULT_SECONDARIES[0],logoUrl:null,domain:null},
   {name:'',team:'',primaryColor:DEFAULT_PRIMARIES[1],secondaryColor:DEFAULT_SECONDARIES[1],logoUrl:null,domain:null},
   {name:'',team:'',primaryColor:DEFAULT_PRIMARIES[2],secondaryColor:DEFAULT_SECONDARIES[2],logoUrl:null,domain:null},
-];
-let _holes=18;
+];let _holes=18;
 let _ltStyle='broadcast';
 let _ltFields=Object.fromEntries(LT_FIELDS.map(f=>[f.key,f.default]));
 let _toastT;
 
 // ── PLAYER ROWS ────────────────────────────────────────────────────
 // Default school colors per player slot
-const DEFAULT_PRIMARIES=['#1a3a6b','#8b1a1a','#1a5c2e','#4a1a6b'];
-const DEFAULT_SECONDARIES=['#c9aa4e','#c9aa4e','#c9aa4e','#c9aa4e'];
-
 function buildPlayerRows(){
   const wrap=document.getElementById('playerRows');
   if(!wrap) return;
